@@ -29,7 +29,7 @@ impl Widget for Win {
     view! {
         gtk::Window {
             #[name="chess_board"]
-            ChessBoard(300) {
+            ChessBoard(500) {
 
             },
             delete_event(_, _) => (WinMsg::Quit, Inhibit(false)),
