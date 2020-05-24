@@ -84,25 +84,32 @@ impl Widget for ChessBoard {
         let cells_size = (self.model.size as f64) / 9.0;
 
         self.canvas.connect_draw(move |_src, context| {
-            context.set_source_rgb(bg_red, bg_green, bg_blue);
-            context.paint();
+            let draw_background = || {
+                context.set_source_rgb(bg_red, bg_green, bg_blue);
+                context.paint();
+            };
 
-            for row in 0..8 {
-                for col in 0..8 {
-                    let is_white_cell = (row+col) % 2 == 0;
-                    if is_white_cell {
-                        context.set_source_rgb(w_cells_red, w_cells_green, w_cells_blue);
+            let draw_cells = || {
+                for row in 0..8 {
+                    for col in 0..8 {
+                        let is_white_cell = (row+col) % 2 == 0;
+                        if is_white_cell {
+                            context.set_source_rgb(w_cells_red, w_cells_green, w_cells_blue);
+                        }
+                        else {
+                            context.set_source_rgb(b_cells_red, b_cells_green, b_cells_blue);
+                        }
+    
+                        let cell_x = cells_size * (0.5 + (col as f64));
+                        let cell_y = cells_size * (0.5 + (row as f64));
+                        context.rectangle(cell_x, cell_y, cells_size, cells_size);
+                        context.fill();
                     }
-                    else {
-                        context.set_source_rgb(b_cells_red, b_cells_green, b_cells_blue);
-                    }
-
-                    let cell_x = cells_size * (0.5 + (col as f64));
-                    let cell_y = cells_size * (0.5 + (row as f64));
-                    context.rectangle(cell_x, cell_y, cells_size, cells_size);
-                    context.fill();
                 }
-            }
+            };
+
+            draw_background();
+            draw_cells();
 
             Inhibit(true)
         });
