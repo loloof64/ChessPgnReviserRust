@@ -14,7 +14,7 @@ pub enum ChessPiecesError {
 }
 
 struct ChessPiecesImages {
-    images: HashMap<(char, u32), ImageSurface>
+    images: HashMap<char, ImageSurface>
 }
 
 impl ChessPiecesImages {
@@ -46,7 +46,7 @@ impl ChessPiecesImages {
             if let Some(Some(image_tree)) = svg_content {
                 let piece_image = render_node_to_image(&image_tree.root(), &default_options)
                 .expect(format!("failed to build image for {} and size {}", fen, cells_size).as_str());
-                self.images.insert((fen, cells_size), piece_image);
+                self.images.insert(fen, piece_image);
             }
             else {
                 println!("failed to build image for {} and size {}", fen, cells_size);
@@ -54,10 +54,8 @@ impl ChessPiecesImages {
         }
     }
 
-    fn get_image(&self, fen: char, size: u32) -> Result<ImageSurface, ChessPiecesError> {
-        let image_id = (fen, size);
-
-        match self.images.get(&image_id) {
+    fn get_image(&self, fen: char) -> Result<ImageSurface, ChessPiecesError> {
+        match self.images.get(&fen) {
             Some(image) => Ok((image).clone()),
             None => Err(ChessPiecesError::BadPieceFenReference{fen})
         }
@@ -146,7 +144,7 @@ impl ChessBoardPainter {
 
                     self.draw_single_piece(
                         context,
-                        self.pieces_images.get_image(value, self.cells_size)
+                        self.pieces_images.get_image(value)
                         .expect(format!("could not get image for {}", value).as_str()), 
                         x, y);
                 }
