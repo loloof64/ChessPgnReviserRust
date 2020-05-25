@@ -1,7 +1,9 @@
 
 use failure::{Fail};
 
-use resvg::backend_cairo::render_node_to_image;
+use resvg::backend_cairo::render_to_image;
+use resvg::usvg::ShapeRendering;
+use resvg::FitTo;
 use cairo::ImageSurface;
 use std::collections::HashMap;
 
@@ -23,7 +25,13 @@ impl ChessPiecesImages {
     }
 
     fn build_images(&mut self, cells_size: u32) {
-        let default_options = resvg::Options::default();
+        let base_size = 45f32;
+        let scale = cells_size as f32 / base_size;
+        let mut options = resvg::Options::default();
+        options.usvg.shape_rendering = ShapeRendering::GeometricPrecision;
+        options.fit_to = FitTo::Zoom(scale);
+
+
         for fen in vec!['P', 'N', 'B', 'R', 'Q', 'K', 'p', 'n', 'b', 'r', 'q', 'k'] {
             let svg_content = match fen {
                 'P' => Some(include_str!("./Chess_plt45.svg")),
@@ -41,10 +49,10 @@ impl ChessPiecesImages {
                 _ => None,
             }.map(|file_content| resvg::usvg::Tree::from_data(
                 file_content.as_bytes(), 
-                &default_options.usvg).ok());
+                &options.usvg).ok());
 
             if let Some(Some(image_tree)) = svg_content {
-                let piece_image = render_node_to_image(&image_tree.root(), &default_options)
+                let piece_image = render_to_image(&image_tree, &options)
                 .expect(format!("failed to build image for {} and size {}", fen, cells_size).as_str());
                 self.images.insert(fen, piece_image);
             }
@@ -161,15 +169,10 @@ impl ChessBoardPainter {
         x: f64,
         y: f64
     ) {
-        let base_size = 45f64;
         let origin = 0f64;
-
-        let cells_size = self.cells_size as f64;
-        let scale = cells_size / base_size;
 
         context.save();
         context.translate(x, y);
-        context.scale(scale, scale);
         context.set_source_surface(&image, origin, origin);
         context.paint();
         context.fill();
