@@ -3,6 +3,7 @@ use relm::{Widget};
 use relm_derive::{Msg, widget};
 use gtk::prelude::*;
 use gtk::{Inhibit};
+use pleco::Board;
 
 use super::chess_board_painter::ChessBoardPainter;
 
@@ -12,6 +13,7 @@ pub struct ChessBoardModel {
     background_color: (f64, f64, f64),
     white_cells_color: (f64, f64, f64),
     black_cells_color: (f64, f64, f64),
+    board: Board,
 }
 
 pub struct ChessBoardModelBuilder {
@@ -38,6 +40,7 @@ impl ChessBoardModelBuilder {
             background_color: self.background_color,
             white_cells_color: self.white_cells_color,
             black_cells_color: self.black_cells_color,
+            board: Board::start_pos(),
         }
     }
 
@@ -80,7 +83,6 @@ impl Widget for ChessBoard {
     fn init_view(&mut self) {
         self.canvas.set_size_request(self.model.size as i32, self.model.size as i32);
 
-
         let background_color = self.model.background_color;
         let white_cells_color = self.model.white_cells_color;
         let black_cells_color = self.model.black_cells_color;
@@ -88,13 +90,16 @@ impl Widget for ChessBoard {
 
         let mut painter = ChessBoardPainter::new(size / 9);
         painter.build_images();
+        
+        self.canvas.connect_draw({
+            let board_copy = self.model.board.clone(); 
+            move |_source, context| {
+                painter.draw_background(context, background_color);
+                painter.draw_cells(context, white_cells_color, black_cells_color);
+                painter.draw_pieces(context, board_copy.fen().as_str());
 
-        self.canvas.connect_draw(move |_source, context| {
-            painter.draw_background(context, background_color);
-            painter.draw_cells(context, white_cells_color, black_cells_color, size);
-            painter.draw_pieces(context);
-
-            Inhibit(true)
+                Inhibit(true)
+            }
         });
     }
 

@@ -97,12 +97,9 @@ impl ChessBoardPainter {
         context: &cairo::Context,
         white_cells_color: (f64, f64, f64),
         black_cells_color: (f64, f64, f64),
-        size: u32,
     ) {
         let (w_cells_red, w_cells_green, w_cells_blue) = white_cells_color;
         let (b_cells_red, b_cells_green, b_cells_blue) = black_cells_color;
-
-        let cells_size = (size as f64) / 9.0;
 
         for row in 0..8 {
             for col in 0..8 {
@@ -114,6 +111,7 @@ impl ChessBoardPainter {
                     context.set_source_rgb(b_cells_red, b_cells_green, b_cells_blue);
                 }
 
+                let cells_size = self.cells_size as f64;
                 let cell_x = cells_size * (0.5 + (col as f64));
                 let cell_y = cells_size * (0.5 + (row as f64));
                 context.rectangle(cell_x, cell_y, cells_size, cells_size);
@@ -125,13 +123,37 @@ impl ChessBoardPainter {
     pub fn draw_pieces(
         &self,
         context: &cairo::Context,
+        position: &str,
     ) {
-        self.draw_single_piece(context,
-             self.pieces_images.get_image('N', self.cells_size).expect("could not get image for "), 
-             80f64, 200f64);
-        self.draw_single_piece(context,
-             self.pieces_images.get_image('k', self.cells_size).expect("could not get image for "), 
-             200f64, 30f64);
+        let board_value = position.split(" ").take(1).collect::<Vec<_>>()[0];
+        let pieces_lines = board_value.split("/").collect::<Vec<_>>();
+        
+        for (line_index, line) in pieces_lines.iter().enumerate() {
+            let line_values = line.chars();
+            let mut col_index = 0;
+
+            for value in line_values {
+                let value_ascii = value as u8;
+                let is_digit_value = value_ascii >= 48 && value_ascii <= 57;
+
+                if !is_digit_value {
+                    let col = col_index;
+                    let row = line_index;
+
+                    let cells_size = self.cells_size as f64;
+                    let x = cells_size * (0.5 + (col as f64));
+                    let y = cells_size * (0.5 + (row as f64));
+
+                    self.draw_single_piece(
+                        context,
+                        self.pieces_images.get_image(value, self.cells_size)
+                        .expect(format!("could not get image for {}", value).as_str()), 
+                        x, y);
+                }
+
+                col_index += 1;
+            }
+        }
     }
 
     fn draw_single_piece(
@@ -144,13 +166,14 @@ impl ChessBoardPainter {
         let base_size = 45f64;
         let origin = 0f64;
 
-        let scale = (self.cells_size as f64) / base_size;
+        let cells_size = self.cells_size as f64;
+        let scale = cells_size / base_size;
 
         context.save();
         context.translate(x, y);
         context.scale(scale, scale);
         context.set_source_surface(&image, origin, origin);
-        context.rectangle(origin, origin, base_size, base_size);
+        context.paint();
         context.fill();
         context.restore();
     }
