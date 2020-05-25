@@ -1,0 +1,1 @@
+Chess assets have been downloaded from [Wikimedia Commons](https://commons.wikimedia.org/wiki/Category:SVG_chess_pieces).
