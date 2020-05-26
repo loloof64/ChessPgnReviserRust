@@ -3,7 +3,7 @@ use failure::Fail;
 use cairo::{Context, FontFace, FontWeight, ImageSurface};
 use resvg::backend_cairo::render_to_image;
 use resvg::usvg::ShapeRendering;
-use resvg::FitTo;
+use resvg::{usvg::Tree, FitTo, Options};
 use std::collections::HashMap;
 
 use super::chess_board_widget::BlackSide;
@@ -26,41 +26,62 @@ impl ChessPiecesImages {
     }
 
     fn build_images(&mut self, cells_size: u32) {
+        let options = ChessPiecesImages::svg_options_for_cells_size(cells_size);
+
+        for fen in vec!['P', 'N', 'B', 'R', 'Q', 'K', 'p', 'n', 'b', 'r', 'q', 'k'] {
+            let svg_content = ChessPiecesImages::piece_value_to_svg_definition(fen, &options);
+            let image_to_render =
+                ChessPiecesImages::image_surface_from_svg_definition(&svg_content, &options);
+
+            if let Some(image) = image_to_render {
+                self.images.insert(fen, image);
+            }
+        }
+    }
+
+    fn image_surface_from_svg_definition(
+        svg_tree: &Option<Tree>,
+        options: &Options,
+    ) -> Option<ImageSurface> {
+        if let Some(tree) = svg_tree {
+            if let Some(image) = render_to_image(&tree, &options) {
+                Some(image)
+            } else {
+                None
+            }
+        } else {
+            None
+        }
+    }
+
+    fn svg_options_for_cells_size(cells_size: u32) -> Options {
         let base_size = 45f32;
         let scale = cells_size as f32 / base_size;
-        let mut options = resvg::Options::default();
+        let mut options = Options::default();
         options.usvg.shape_rendering = ShapeRendering::GeometricPrecision;
         options.fit_to = FitTo::Zoom(scale);
 
-        for fen in vec!['P', 'N', 'B', 'R', 'Q', 'K', 'p', 'n', 'b', 'r', 'q', 'k'] {
-            let svg_content = match fen {
-                'P' => Some(include_str!("./Chess_plt45.svg")),
-                'N' => Some(include_str!("./Chess_nlt45.svg")),
-                'B' => Some(include_str!("./Chess_blt45.svg")),
-                'R' => Some(include_str!("./Chess_rlt45.svg")),
-                'Q' => Some(include_str!("./Chess_qlt45.svg")),
-                'K' => Some(include_str!("./Chess_klt45.svg")),
-                'p' => Some(include_str!("./Chess_pdt45.svg")),
-                'n' => Some(include_str!("./Chess_ndt45.svg")),
-                'b' => Some(include_str!("./Chess_bdt45.svg")),
-                'r' => Some(include_str!("./Chess_rdt45.svg")),
-                'q' => Some(include_str!("./Chess_qdt45.svg")),
-                'k' => Some(include_str!("./Chess_kdt45.svg")),
-                _ => None,
-            }
-            .map(|file_content| {
-                resvg::usvg::Tree::from_data(file_content.as_bytes(), &options.usvg).ok()
-            });
+        options
+    }
 
-            if let Some(Some(image_tree)) = svg_content {
-                let piece_image = render_to_image(&image_tree, &options).expect(
-                    format!("failed to build image for {} and size {}", fen, cells_size).as_str(),
-                );
-                self.images.insert(fen, piece_image);
-            } else {
-                println!("failed to build image for {} and size {}", fen, cells_size);
-            }
+    fn piece_value_to_svg_definition(piece_value_fen: char, options: &Options) -> Option<Tree> {
+        match piece_value_fen {
+            'P' => Some(include_str!("./Chess_plt45.svg")),
+            'N' => Some(include_str!("./Chess_nlt45.svg")),
+            'B' => Some(include_str!("./Chess_blt45.svg")),
+            'R' => Some(include_str!("./Chess_rlt45.svg")),
+            'Q' => Some(include_str!("./Chess_qlt45.svg")),
+            'K' => Some(include_str!("./Chess_klt45.svg")),
+            'p' => Some(include_str!("./Chess_pdt45.svg")),
+            'n' => Some(include_str!("./Chess_ndt45.svg")),
+            'b' => Some(include_str!("./Chess_bdt45.svg")),
+            'r' => Some(include_str!("./Chess_rdt45.svg")),
+            'q' => Some(include_str!("./Chess_qdt45.svg")),
+            'k' => Some(include_str!("./Chess_kdt45.svg")),
+            _ => None,
         }
+        .map(|file_content| Tree::from_data(file_content.as_bytes(), &options.usvg).ok())
+        .unwrap_or(None)
     }
 
     fn get_image(&self, fen: char) -> Result<ImageSurface, ChessPiecesError> {

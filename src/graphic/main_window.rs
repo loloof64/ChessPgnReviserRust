@@ -42,7 +42,7 @@ impl Widget for Win {
         gtk::Window {
             gtk::Box(gtk::Orientation::Vertical, 5) {
                 #[name="chess_board"]
-                ChessBoard(250) {
+                ChessBoard(500) {
 
                 },
                 gtk::Button {

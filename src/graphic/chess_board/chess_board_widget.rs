@@ -60,27 +60,27 @@ impl ChessBoardModelBuilder {
         }
     }
 
-    fn set_size(&mut self, size: u32) {
+    fn set_board_size(&mut self, size: u32) {
         self.size = size;
     }
 
-    fn set_background_color(&mut self, background_color: (f64, f64, f64)) {
+    fn set_board_background_color(&mut self, background_color: (f64, f64, f64)) {
         self.background_color = background_color;
     }
 
-    fn set_white_cells_color(&mut self, white_cells_color: (f64, f64, f64)) {
+    fn set_board_white_cells_color(&mut self, white_cells_color: (f64, f64, f64)) {
         self.white_cells_color = white_cells_color;
     }
 
-    fn set_black_cells_color(&mut self, black_cells_color: (f64, f64, f64)) {
+    fn set_board_black_cells_color(&mut self, black_cells_color: (f64, f64, f64)) {
         self.black_cells_color = black_cells_color;
     }
 
-    fn set_coordinates_color(&mut self, coordinates_color: (f64, f64, f64)) {
+    fn set_board_coordinates_color(&mut self, coordinates_color: (f64, f64, f64)) {
         self.coordinates_color = coordinates_color;
     }
 
-    fn set_black_side(&mut self, side: BlackSide) {
+    fn set_board_orientation(&mut self, side: BlackSide) {
         self.black_side = side;
     }
 }
@@ -92,9 +92,9 @@ pub enum ChessBoardMsg {
 
 #[widget]
 impl Widget for ChessBoard {
-    fn model(size: u32) -> ChessBoardModel {
+    fn model(board_size: u32) -> ChessBoardModel {
         let mut model_builder = ChessBoardModelBuilder::new();
-        model_builder.set_size(size);
+        model_builder.set_board_size(board_size);
         model_builder.build()
     }
 
@@ -119,6 +119,7 @@ impl Widget for ChessBoard {
         let black_cells_color = self.model.black_cells_color;
         let coordinates_color = self.model.coordinates_color;
         let size = self.model.size;
+        
         let mut painter = ChessBoardPainter::new(size / 9);
         painter.build_images();
         let board = Rc::clone(&self.model.board);
