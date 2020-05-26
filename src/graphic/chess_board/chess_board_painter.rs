@@ -6,6 +6,8 @@ use resvg::usvg::ShapeRendering;
 use resvg::FitTo;
 use std::collections::HashMap;
 
+use super::chess_board_widget::BlackSide;
+
 #[derive(Debug, Fail)]
 pub enum ChessPiecesError {
     #[fail(display = "Bad piece fen: {}", fen)]
@@ -121,7 +123,7 @@ impl ChessBoardPainter {
         }
     }
 
-    pub fn draw_pieces(&self, context: &Context, position: &str) {
+    pub fn draw_pieces(&self, context: &Context, position: &str, black_side: BlackSide) {
         let board_value = position.split(" ").take(1).collect::<Vec<_>>()[0];
         let pieces_lines = board_value.split("/").collect::<Vec<_>>();
 
@@ -140,8 +142,20 @@ impl ChessBoardPainter {
                     let row = line_index;
 
                     let cells_size = self.cells_size as f64;
-                    let x = cells_size * (0.5 + (col as f64));
-                    let y = cells_size * (0.5 + (row as f64));
+                    let x = cells_size
+                        * (0.5
+                            + if black_side == BlackSide::BlackBottom {
+                                7 - col
+                            } else {
+                                col
+                            } as f64);
+                    let y = cells_size
+                        * (0.5
+                            + if black_side == BlackSide::BlackBottom {
+                                7 - row
+                            } else {
+                                row
+                            } as f64);
 
                     self.draw_single_piece(
                         context,
@@ -184,7 +198,12 @@ impl ChessBoardPainter {
         context.fill();
     }
 
-    pub fn draw_coordinates(&self, context: &Context, coordinates_color: (f64, f64, f64)) {
+    pub fn draw_coordinates(
+        &self,
+        context: &Context,
+        coordinates_color: (f64, f64, f64),
+        black_side: BlackSide,
+    ) {
         let cells_size = self.cells_size as f64;
         let ascii_uppercase_a = 65u8;
         let ascii_1 = 49u8;
@@ -207,7 +226,11 @@ impl ChessBoardPainter {
         ));
 
         for col in 0..8 {
-            let file = col;
+            let file = if black_side == BlackSide::BlackBottom {
+                7 - col
+            } else {
+                col
+            };
             let coordinate = (ascii_uppercase_a + file) as char;
             let coordinate = format!("{}", coordinate);
             let coordinate = coordinate.as_str();
@@ -224,7 +247,11 @@ impl ChessBoardPainter {
         }
 
         for row in 0..8 {
-            let rank = 7 - row;
+            let rank = if black_side == BlackSide::BlackBottom {
+                row
+            } else {
+                7 - row
+            };
             let coordinate = (ascii_1 + rank) as char;
             let coordinate = format!("{}", coordinate);
             let coordinate = coordinate.as_str();

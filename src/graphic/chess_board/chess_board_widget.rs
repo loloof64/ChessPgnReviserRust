@@ -9,6 +9,12 @@ use std::rc::Rc;
 
 use super::chess_board_painter::ChessBoardPainter;
 
+#[derive(Debug, PartialEq, Copy, Clone)]
+pub enum BlackSide {
+    BlackTop,
+    BlackBottom,
+}
+
 #[allow(dead_code)]
 pub struct ChessBoardModel {
     size: u32,
@@ -17,6 +23,7 @@ pub struct ChessBoardModel {
     black_cells_color: (f64, f64, f64),
     coordinates_color: (f64, f64, f64),
     board: Rc<RefCell<Board>>,
+    black_side: Rc<RefCell<BlackSide>>,
 }
 
 pub struct ChessBoardModelBuilder {
@@ -25,6 +32,7 @@ pub struct ChessBoardModelBuilder {
     white_cells_color: (f64, f64, f64),
     black_cells_color: (f64, f64, f64),
     coordinates_color: (f64, f64, f64),
+    black_side: BlackSide,
 }
 
 #[allow(dead_code)]
@@ -36,6 +44,7 @@ impl ChessBoardModelBuilder {
             white_cells_color: (1.0, 0.85, 0.6),
             black_cells_color: (0.85, 0.55, 0.25),
             coordinates_color: (1.0, 0.78, 0.0),
+            black_side: BlackSide::BlackTop,
         }
     }
 
@@ -46,6 +55,7 @@ impl ChessBoardModelBuilder {
             white_cells_color: self.white_cells_color,
             black_cells_color: self.black_cells_color,
             coordinates_color: self.coordinates_color,
+            black_side: Rc::new(RefCell::new(self.black_side)),
             board: Rc::new(RefCell::new(Board::start_pos())),
         }
     }
@@ -69,11 +79,15 @@ impl ChessBoardModelBuilder {
     fn set_coordinates_color(&mut self, coordinates_color: (f64, f64, f64)) {
         self.coordinates_color = coordinates_color;
     }
+
+    fn set_black_side(&mut self, side: BlackSide) {
+        self.black_side = side;
+    }
 }
 
 #[derive(Msg)]
 pub enum ChessBoardMsg {
-    SetEndgame(),
+    SetBlackSide(BlackSide),
 }
 
 #[widget]
@@ -86,12 +100,10 @@ impl Widget for ChessBoard {
 
     fn update(&mut self, event: ChessBoardMsg) {
         match event {
-            ChessBoardMsg::SetEndgame() => {
+            ChessBoardMsg::SetBlackSide(side) => {
                 {
-                    let new_board = Board::from_fen("8/8/3k4/8/3K4/8/3P4/8 b - - 0 34")
-                        .expect("failed to get board new position");
-                    let mut board_from_model = (*self.model.board).borrow_mut();
-                    *board_from_model = new_board;
+                    let mut black_side_from_model = (*self.model.black_side).borrow_mut();
+                    *black_side_from_model = side;
                 }
                 self.repaint();
             }
@@ -107,18 +119,21 @@ impl Widget for ChessBoard {
         let black_cells_color = self.model.black_cells_color;
         let coordinates_color = self.model.coordinates_color;
         let size = self.model.size;
-
         let mut painter = ChessBoardPainter::new(size / 9);
         painter.build_images();
         let board = Rc::clone(&self.model.board);
+        let black_side = Rc::clone(&self.model.black_side);
+
         self.canvas.connect_draw({
             move |_source, context| {
+                let black_side = (*black_side).borrow();
+
                 let board = board.borrow();
                 painter.draw_background(context, background_color);
                 painter.draw_cells(context, white_cells_color, black_cells_color);
-                painter.draw_pieces(context, board.fen().as_str());
                 painter.draw_player_turn(context, board.fen().as_str());
-                painter.draw_coordinates(context, coordinates_color);
+                painter.draw_pieces(context, board.fen().as_str(), *black_side);
+                painter.draw_coordinates(context, coordinates_color, *black_side);
                 Inhibit(true)
             }
         });

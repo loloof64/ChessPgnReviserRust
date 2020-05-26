@@ -5,24 +5,36 @@ use relm_derive::{widget, Msg};
 
 use super::chess_board::*;
 
-pub struct WinModel {}
+pub struct WinModel {
+    black_side: BlackSide,
+}
 
 #[derive(Msg)]
 pub enum WinMsg {
     Quit,
-    SetEndgame,
+    SetBoardUpsideDown,
 }
 
 #[widget]
 impl Widget for Win {
     fn model() -> WinModel {
-        WinModel {}
+        WinModel {
+            black_side: BlackSide::BlackTop,
+        }
     }
 
     fn update(&mut self, event: WinMsg) {
         match event {
             WinMsg::Quit => gtk::main_quit(),
-            WinMsg::SetEndgame => self.chess_board.emit(ChessBoardMsg::SetEndgame()),
+            WinMsg::SetBoardUpsideDown => {
+                let new_black_side = match self.model.black_side {
+                    BlackSide::BlackBottom => BlackSide::BlackTop,
+                    BlackSide::BlackTop => BlackSide::BlackBottom,
+                };
+                self.model.black_side = new_black_side;
+                self.chess_board
+                    .emit(ChessBoardMsg::SetBlackSide(new_black_side));
+            }
         }
     }
 
@@ -30,12 +42,12 @@ impl Widget for Win {
         gtk::Window {
             gtk::Box(gtk::Orientation::Vertical, 5) {
                 #[name="chess_board"]
-                ChessBoard(500) {
+                ChessBoard(250) {
 
                 },
                 gtk::Button {
-                    label: "set endgame",
-                    clicked() => Some(WinMsg::SetEndgame),
+                    label: "Toggle board orientation",
+                    clicked() => Some(WinMsg::SetBoardUpsideDown),
                 },
             },
             delete_event(_self, _event) => (WinMsg::Quit, Inhibit(false)),
