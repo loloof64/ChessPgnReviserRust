@@ -63,7 +63,7 @@ impl ChessBoardModelBuilder {
 
 #[derive(Msg)]
 pub enum ChessBoardMsg {
-    
+    SetEndgame(),
 }
 
 #[widget]
@@ -76,7 +76,14 @@ impl Widget for ChessBoard {
 
     fn update(&mut self, event: ChessBoardMsg) {
         match event {
+            ChessBoardMsg::SetEndgame() => {
+                self.model.board = Board::from_fen("8/8/3k4/8/3K4/8/3P4/8 w - - 0 34").expect("Bad fen !");
+                self.repaint();
 
+                ////////////////////////////////////
+                println!("Local test: fen : {}", self.model.board.fen());
+                ////////////////////////////////////
+            },
         }
     }
 
@@ -92,11 +99,15 @@ impl Widget for ChessBoard {
         painter.build_images();
         
         self.canvas.connect_draw({
-            let board_copy = self.model.board.clone(); 
+            let board = self.model.board.clone();
             move |_source, context| {
+                ////////////////////////////////////////////////
+                println!("{}", board.fen().as_str());
+                ////////////////////////////////////////////////
+
                 painter.draw_background(context, background_color);
                 painter.draw_cells(context, white_cells_color, black_cells_color);
-                painter.draw_pieces(context, board_copy.fen().as_str());
+                painter.draw_pieces(context, board.fen().as_str());
 
                 Inhibit(true)
             }
@@ -108,5 +119,15 @@ impl Widget for ChessBoard {
         gtk::DrawingArea {
             
         }
+    }
+}
+
+impl ChessBoard {
+    pub fn repaint(&self) {
+        self.canvas.queue_draw_region(
+            &cairo::Region::create_rectangle(&cairo::RectangleInt{
+                x: 0, y: 0, width: self.model.size as i32, height: self.model.size as i32, 
+            })
+        );
     }
 }
