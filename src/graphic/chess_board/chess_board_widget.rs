@@ -5,6 +5,9 @@ use gtk::prelude::*;
 use gtk::{Inhibit};
 use pleco::Board;
 
+use std::rc::Rc;
+use std::cell::RefCell;
+
 use super::chess_board_painter::ChessBoardPainter;
 
 #[allow(dead_code)]
@@ -13,7 +16,7 @@ pub struct ChessBoardModel {
     background_color: (f64, f64, f64),
     white_cells_color: (f64, f64, f64),
     black_cells_color: (f64, f64, f64),
-    board: Board,
+    board: Rc<RefCell<Board>>,
 }
 
 pub struct ChessBoardModelBuilder {
@@ -40,7 +43,7 @@ impl ChessBoardModelBuilder {
             background_color: self.background_color,
             white_cells_color: self.white_cells_color,
             black_cells_color: self.black_cells_color,
-            board: Board::start_pos(),
+            board: Rc::new(RefCell::new(Board::start_pos())),
         }
     }
 
@@ -77,12 +80,13 @@ impl Widget for ChessBoard {
     fn update(&mut self, event: ChessBoardMsg) {
         match event {
             ChessBoardMsg::SetEndgame() => {
-                self.model.board = Board::from_fen("8/8/3k4/8/3K4/8/3P4/8 w - - 0 34").expect("Bad fen !");
+                {
+                    let new_board = Board::from_fen("8/8/3k4/8/3K4/8/3P4/8 w - - 0 34")
+                        .expect("failed to get board new position");
+                    let mut board_from_model = (*self.model.board).borrow_mut();
+                    *board_from_model = new_board;
+                }
                 self.repaint();
-
-                ////////////////////////////////////
-                println!("Local test: fen : {}", self.model.board.fen());
-                ////////////////////////////////////
             },
         }
     }
@@ -98,17 +102,15 @@ impl Widget for ChessBoard {
         let mut painter = ChessBoardPainter::new(size / 9);
         painter.build_images();
         
+        let board = Rc::clone(&self.model.board);
         self.canvas.connect_draw({
-            let board = self.model.board.clone();
             move |_source, context| {
-                ////////////////////////////////////////////////
-                println!("{}", board.fen().as_str());
-                ////////////////////////////////////////////////
-
+                let board = board.borrow();
+                
                 painter.draw_background(context, background_color);
                 painter.draw_cells(context, white_cells_color, black_cells_color);
                 painter.draw_pieces(context, board.fen().as_str());
-
+                
                 Inhibit(true)
             }
         });
