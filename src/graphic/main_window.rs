@@ -1,24 +1,22 @@
-use relm::{Widget};
 use gtk::prelude::*;
-use gtk::{Inhibit};
-use relm_derive::{Msg, widget};
+use gtk::Inhibit;
+use relm::Widget;
+use relm_derive::{widget, Msg};
 
 use super::chess_board::*;
 
-pub struct WinModel {
-
-}
+pub struct WinModel {}
 
 #[derive(Msg)]
 pub enum WinMsg {
     Quit,
-    SetEndgame
+    SetEndgame,
 }
 
 #[widget]
 impl Widget for Win {
     fn model() -> WinModel {
-        WinModel{}
+        WinModel {}
     }
 
     fn update(&mut self, event: WinMsg) {
@@ -38,7 +36,7 @@ impl Widget for Win {
                 gtk::Button {
                     label: "set endgame",
                     clicked() => Some(WinMsg::SetEndgame),
-                }, 
+                },
             },
             delete_event(_self, _event) => (WinMsg::Quit, Inhibit(false)),
         }

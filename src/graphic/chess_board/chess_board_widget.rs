@@ -1,12 +1,11 @@
-
-use relm::{Widget};
-use relm_derive::{Msg, widget};
 use gtk::prelude::*;
-use gtk::{Inhibit};
+use gtk::Inhibit;
 use pleco::Board;
+use relm::Widget;
+use relm_derive::{widget, Msg};
 
-use std::rc::Rc;
 use std::cell::RefCell;
+use std::rc::Rc;
 
 use super::chess_board_painter::ChessBoardPainter;
 
@@ -16,6 +15,7 @@ pub struct ChessBoardModel {
     background_color: (f64, f64, f64),
     white_cells_color: (f64, f64, f64),
     black_cells_color: (f64, f64, f64),
+    coordinates_color: (f64, f64, f64),
     board: Rc<RefCell<Board>>,
 }
 
@@ -24,6 +24,7 @@ pub struct ChessBoardModelBuilder {
     background_color: (f64, f64, f64),
     white_cells_color: (f64, f64, f64),
     black_cells_color: (f64, f64, f64),
+    coordinates_color: (f64, f64, f64),
 }
 
 #[allow(dead_code)]
@@ -34,6 +35,7 @@ impl ChessBoardModelBuilder {
             background_color: (0.5, 0.4, 0.9),
             white_cells_color: (1.0, 0.85, 0.6),
             black_cells_color: (0.85, 0.55, 0.25),
+            coordinates_color: (1.0, 0.78, 0.0),
         }
     }
 
@@ -43,6 +45,7 @@ impl ChessBoardModelBuilder {
             background_color: self.background_color,
             white_cells_color: self.white_cells_color,
             black_cells_color: self.black_cells_color,
+            coordinates_color: self.coordinates_color,
             board: Rc::new(RefCell::new(Board::start_pos())),
         }
     }
@@ -61,6 +64,10 @@ impl ChessBoardModelBuilder {
 
     fn set_black_cells_color(&mut self, black_cells_color: (f64, f64, f64)) {
         self.black_cells_color = black_cells_color;
+    }
+
+    fn set_coordinates_color(&mut self, coordinates_color: (f64, f64, f64)) {
+        self.coordinates_color = coordinates_color;
     }
 }
 
@@ -87,31 +94,31 @@ impl Widget for ChessBoard {
                     *board_from_model = new_board;
                 }
                 self.repaint();
-            },
+            }
         }
     }
 
     fn init_view(&mut self) {
-        self.canvas.set_size_request(self.model.size as i32, self.model.size as i32);
+        self.canvas
+            .set_size_request(self.model.size as i32, self.model.size as i32);
 
         let background_color = self.model.background_color;
         let white_cells_color = self.model.white_cells_color;
         let black_cells_color = self.model.black_cells_color;
+        let coordinates_color = self.model.coordinates_color;
         let size = self.model.size;
 
         let mut painter = ChessBoardPainter::new(size / 9);
         painter.build_images();
-        
         let board = Rc::clone(&self.model.board);
         self.canvas.connect_draw({
             move |_source, context| {
                 let board = board.borrow();
-                
                 painter.draw_background(context, background_color);
                 painter.draw_cells(context, white_cells_color, black_cells_color);
                 painter.draw_pieces(context, board.fen().as_str());
                 painter.draw_player_turn(context, board.fen().as_str());
-                
+                painter.draw_coordinates(context, coordinates_color);
                 Inhibit(true)
             }
         });
@@ -120,17 +127,18 @@ impl Widget for ChessBoard {
     view! {
         #[name="canvas"]
         gtk::DrawingArea {
-            
         }
     }
 }
 
 impl ChessBoard {
     pub fn repaint(&self) {
-        self.canvas.queue_draw_region(
-            &cairo::Region::create_rectangle(&cairo::RectangleInt{
-                x: 0, y: 0, width: self.model.size as i32, height: self.model.size as i32, 
-            })
-        );
+        self.canvas
+            .queue_draw_region(&cairo::Region::create_rectangle(&cairo::RectangleInt {
+                x: 0,
+                y: 0,
+                width: self.model.size as i32,
+                height: self.model.size as i32,
+            }));
     }
 }
