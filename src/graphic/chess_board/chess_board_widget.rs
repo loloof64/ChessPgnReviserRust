@@ -81,7 +81,7 @@ impl Widget for ChessBoard {
         match event {
             ChessBoardMsg::SetEndgame() => {
                 {
-                    let new_board = Board::from_fen("8/8/3k4/8/3K4/8/3P4/8 w - - 0 34")
+                    let new_board = Board::from_fen("8/8/3k4/8/3K4/8/3P4/8 b - - 0 34")
                         .expect("failed to get board new position");
                     let mut board_from_model = (*self.model.board).borrow_mut();
                     *board_from_model = new_board;
@@ -110,6 +110,7 @@ impl Widget for ChessBoard {
                 painter.draw_background(context, background_color);
                 painter.draw_cells(context, white_cells_color, black_cells_color);
                 painter.draw_pieces(context, board.fen().as_str());
+                painter.draw_player_turn(context, board.fen().as_str());
                 
                 Inhibit(true)
             }

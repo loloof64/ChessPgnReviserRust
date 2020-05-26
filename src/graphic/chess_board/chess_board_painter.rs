@@ -107,6 +107,8 @@ impl ChessBoardPainter {
         let (w_cells_red, w_cells_green, w_cells_blue) = white_cells_color;
         let (b_cells_red, b_cells_green, b_cells_blue) = black_cells_color;
 
+        let cells_size = self.cells_size as f64;
+
         for row in 0..8 {
             for col in 0..8 {
                 let is_white_cell = (row+col) % 2 == 0;
@@ -117,7 +119,6 @@ impl ChessBoardPainter {
                     context.set_source_rgb(b_cells_red, b_cells_green, b_cells_blue);
                 }
 
-                let cells_size = self.cells_size as f64;
                 let cell_x = cells_size * (0.5 + (col as f64));
                 let cell_y = cells_size * (0.5 + (row as f64));
                 context.rectangle(cell_x, cell_y, cells_size, cells_size);
@@ -167,6 +168,24 @@ impl ChessBoardPainter {
 
             }
         }
+    }
+
+    pub fn draw_player_turn(
+        &self,
+        context: &cairo::Context,
+        position: &str
+    ) {
+        let turn_str = position.split(" ").skip(1).take(1).collect::<Vec<_>>()[0];
+        let is_white_turn = turn_str == "w";
+
+        let cells_size = self.cells_size as f64;
+        let location = cells_size * 8.75;
+        let radius = cells_size * 0.25;
+        let color = if is_white_turn { (1f64, 1f64, 1f64) } else { (0f64, 0f64, 0f64)};
+
+        context.set_source_rgb(color.0, color.1, color.2);
+        context.arc(location, location, radius, 0f64, 2f64 * std::f64::consts::PI);
+        context.fill();
     }
 
     fn draw_single_piece(
