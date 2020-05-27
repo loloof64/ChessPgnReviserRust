@@ -148,74 +148,8 @@ impl ChessBoardPainter {
         let pieces_lines = self.get_pieces_values_from_fen(position);
 
         for (line_index, line) in pieces_lines.iter().enumerate() {
-            self.draw_pieces_line(context, line, line_index, black_side);
+            self.draw_pieces_line(context, line, line_index as u8, black_side);
         }
-    }
-
-    fn get_pieces_values_from_fen<'a>(&self, position_fen: &'a str) -> Vec<&'a str> {
-        let board_value = position_fen.split(" ").take(1).collect::<Vec<_>>()[0];
-        board_value.split("/").collect::<Vec<_>>()
-    }
-
-    fn draw_pieces_line(
-        &self,
-        context: &Context,
-        line: &str,
-        line_index: usize,
-        black_side: BlackSide,
-    ) {
-        let line_values = line.chars();
-        let mut col_index = 0_u8;
-        let ascii_0 = 48;
-        let ascii_9 = 57;
-
-        for value in line_values {
-            let value_ascii = value as u8;
-            let is_digit_value = value_ascii >= ascii_0 && value_ascii <= ascii_9;
-
-            if is_digit_value {
-                col_index += self.skip_holes(value_ascii);
-            } else {
-                self.draw_single_piece(context, value, col_index, line_index, black_side);
-                col_index += 1;
-            }
-        }
-    }
-
-    fn skip_holes(&self, value_ascii: u8) -> u8 {
-        let ascii_0 = 48;
-        let holes_count = value_ascii - ascii_0;
-        holes_count
-    }
-
-    fn draw_single_piece(
-        &self,
-        context: &Context,
-        value: char,
-        col_index: u8,
-        line_index: usize,
-        black_side: BlackSide,
-    ) {
-        let col = if black_side == BlackSide::BlackBottom {
-            7_f64 - col_index as f64
-        } else {
-            col_index as f64
-        };
-        let row = if black_side == BlackSide::BlackBottom {
-            7_f64 - line_index as f64
-        } else {
-            line_index as f64
-        };
-
-        let cells_size = self.cells_size as f64;
-        self.draw_single_piece_image(
-            context,
-            self.pieces_images
-                .get_image(value)
-                .expect(format!("could not get image for {}", value).as_str()),
-            cells_size * (0.5 + col),
-            cells_size * (0.5 + row),
-        );
     }
 
     pub fn draw_player_turn(&self, context: &Context, position: &str) {
@@ -251,6 +185,88 @@ impl ChessBoardPainter {
         self.prepare_coordinates_drawing(&context, coordinates_color);
         self.draw_files_coordinates(&context, black_side);
         self.draw_ranks_coordinates(&context, black_side);
+    }
+
+    fn get_pieces_values_from_fen<'a>(&self, position_fen: &'a str) -> Vec<&'a str> {
+        let board_value = position_fen.split(" ").take(1).collect::<Vec<_>>()[0];
+        board_value.split("/").collect::<Vec<_>>()
+    }
+
+    fn draw_pieces_line(
+        &self,
+        context: &Context,
+        line: &str,
+        line_index: u8,
+        black_side: BlackSide,
+    ) {
+        let line_values = line.chars();
+        let mut col_index = 0_u8;
+        let ascii_0 = 48;
+        let ascii_9 = 57;
+
+        for value in line_values {
+            let value_ascii = value as u8;
+            let is_digit_value = value_ascii >= ascii_0 && value_ascii <= ascii_9;
+
+            if is_digit_value {
+                col_index += self.skip_holes(value_ascii);
+            } else {
+                self.draw_single_piece(context, value, col_index, line_index, black_side);
+                col_index += 1;
+            }
+        }
+    }
+
+    fn skip_holes(&self, value_ascii: u8) -> u8 {
+        let ascii_0 = 48;
+        let holes_count = value_ascii - ascii_0;
+        holes_count
+    }
+
+    fn draw_single_piece(
+        &self,
+        context: &Context,
+        value: char,
+        col_index: u8,
+        line_index: u8,
+        black_side: BlackSide,
+    ) {
+        let col = self.get_col(col_index, black_side) as f64;
+        let row = self.get_row(line_index, black_side) as f64;
+
+        let cells_size = self.cells_size as f64;
+        self.draw_single_piece_image(
+            context,
+            self.pieces_images
+                .get_image(value)
+                .expect(format!("could not get image for {}", value).as_str()),
+            cells_size * (0.5 + col),
+            cells_size * (0.5 + row),
+        );
+    }
+
+    fn get_col(
+        &self,
+        col_index: u8,
+        black_side: BlackSide
+    ) -> u8 {
+        if black_side == BlackSide::BlackBottom {
+            7 - col_index
+        } else {
+            col_index
+        }
+    }
+
+    fn get_row(
+        &self,
+        line_index: u8,
+        black_side: BlackSide
+    ) -> u8 {
+        if black_side == BlackSide::BlackBottom {
+            7 - line_index
+        } else {
+            line_index
+        }
     }
 
     fn prepare_coordinates_drawing(&self, context: &Context, coordinates_color: (f64, f64, f64)) {
