@@ -225,9 +225,13 @@ impl ChessBoardPainter {
         coordinates_color: (f64, f64, f64),
         black_side: BlackSide,
     ) {
+        self.prepare_coordinates_drawing(&context, coordinates_color);
+        self.draw_files_coordinates(&context, black_side);
+        self.draw_ranks_coordinates(&context, black_side);
+    }
+
+    fn prepare_coordinates_drawing(&self, context: &Context, coordinates_color: (f64, f64, f64)) {
         let cells_size = self.cells_size as f64;
-        let ascii_uppercase_a = 65u8;
-        let ascii_1 = 49u8;
         let font_size = 0.35 * cells_size;
         let old_font_face = context.get_font_face();
 
@@ -245,6 +249,11 @@ impl ChessBoardPainter {
             old_font_face.toy_get_slant(),
             FontWeight::Bold,
         ));
+    }
+
+    fn draw_files_coordinates(&self, context: &Context, black_side: BlackSide) {
+        let cells_size = self.cells_size as f64;
+        let ascii_uppercase_a = 65u8;
 
         for col in 0..8 {
             let file = if black_side == BlackSide::BlackBottom {
@@ -266,6 +275,11 @@ impl ChessBoardPainter {
             context.move_to(x, y2);
             context.show_text(coordinate);
         }
+    }
+
+    fn draw_ranks_coordinates(&self, context: &Context, black_side: BlackSide) {
+        let cells_size = self.cells_size as f64;
+        let ascii_1 = 49u8;
 
         for row in 0..8 {
             let rank = if black_side == BlackSide::BlackBottom {
