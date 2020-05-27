@@ -119,13 +119,8 @@ impl Widget for ChessBoard {
 
     fn init_view(&mut self) {
         self.set_canvas_size();
-        self.canvas.add_events(
-            EventMask::BUTTON_PRESS_MASK
-                | EventMask::BUTTON_RELEASE_MASK
-                | EventMask::POINTER_MOTION_MASK,
-        );
-
         self.set_canvas_draw_implementation();
+        self.add_canvas_mouse_reactivity_implementation();
     }
 
     view! {
@@ -177,5 +172,56 @@ impl ChessBoard {
                 Inhibit(false)
             });
         }
+    }
+
+    pub fn add_canvas_mouse_reactivity_implementation(&self) {
+        self.make_canvas_reactive();
+        self.add_canvas_mouse_press_implementation();
+        self.add_canvas_mouse_release_implementation();
+        self.add_canvas_mouse_move_implementation();
+    }
+
+    fn make_canvas_reactive(&self) {
+        self.canvas.add_events(
+            EventMask::BUTTON_PRESS_MASK
+                | EventMask::BUTTON_RELEASE_MASK
+                | EventMask::POINTER_MOTION_MASK,
+        );
+    }
+
+    fn add_canvas_mouse_press_implementation(&self) {
+        let weak_state = Rc::downgrade(&self.model.state);
+        self.canvas
+            .connect_button_press_event(move |_widget, event| {
+                if let Some(_state) = weak_state.upgrade() {
+                    let (x, y) = event.get_position();
+                    println!("Press => ({}, {})", x ,y);
+                }
+                Inhibit(false)
+            });
+    }
+
+    fn add_canvas_mouse_release_implementation(&self) {
+        let weak_state = Rc::downgrade(&self.model.state);
+        self.canvas
+            .connect_button_release_event(move |_widget, event| {
+                if let Some(_state) = weak_state.upgrade() {
+                    let (x, y) = event.get_position();
+                    println!("Release => ({}, {})", x ,y);
+                }
+                Inhibit(false)
+            });
+    }
+
+    fn add_canvas_mouse_move_implementation(&self) {
+        let weak_state = Rc::downgrade(&self.model.state);
+        self.canvas
+            .connect_motion_notify_event(move |_widget, event| {
+                if let Some(_state) = weak_state.upgrade() {
+                    let (x, y) = event.get_position();
+                    println!("Move => ({}, {})", x ,y);
+                }
+                Inhibit(false)
+            });
     }
 }
