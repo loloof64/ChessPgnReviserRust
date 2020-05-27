@@ -1,10 +1,7 @@
 use gdk::EventMask;
 use gtk::prelude::*;
 use gtk::Inhibit;
-use pleco::{
-    core::{sq::SQ},
-    Board,
-};
+use pleco::{core::sq::SQ, Board};
 use relm::Widget;
 use relm_derive::{widget, Msg};
 
@@ -218,12 +215,12 @@ impl ChessBoard {
         self.canvas
             .connect_button_press_event(move |widget, event| {
                 if let Some(dnd_state) = weak_dnd_state.upgrade() {
-                    let dnd_is_to_activate;
+                    let dnd_not_started;
                     {
                         let dnd_state = (*dnd_state).borrow();
-                        dnd_is_to_activate = !dnd_state.dnd_active;
+                        dnd_not_started = !dnd_state.dnd_active;
                     }
-                    if dnd_is_to_activate {
+                    if dnd_not_started {
                         if let Some(chess_state) = weak_chess_state.upgrade() {
                             let chess_state = (*chess_state).borrow();
                             let (x, y) = event.get_position();
@@ -235,8 +232,8 @@ impl ChessBoard {
                             dnd_state.cursor_x = x - cells_size * 0.5;
                             dnd_state.cursor_y = y - cells_size * 0.5;
 
-                            let col = ((x - cells_size * 0.5) / cells_size) as u8;
-                            let row = ((y - cells_size * 0.5) / cells_size) as u8;
+                            let col = ((x - cells_size * 0.5) / cells_size) as i8;
+                            let row = ((y - cells_size * 0.5) / cells_size) as i8;
                             let file = if chess_state.black_side == BlackSide::BlackBottom {
                                 7 - col
                             } else {
@@ -248,26 +245,31 @@ impl ChessBoard {
                                 7 - row
                             };
 
-                            let piece_at_square = chess_state
-                                .board
-                                .piece_at_sq(SQ::from(rank * 8 + file))
-                                .character();
+                            let cell_in_bounds = file >= 0 && file <= 7 && rank >= 0 && rank <= 7;
+                            if cell_in_bounds {
+                                let file = file as u8;
+                                let rank = rank as u8;
+                                let piece_at_square = chess_state
+                                    .board
+                                    .piece_at_sq(SQ::from(rank * 8 + file))
+                                    .character();
 
-                            if let Some(fen) = piece_at_square {
-                                dnd_state.origin_file = file;
-                                dnd_state.origin_rank = rank;
+                                if let Some(fen) = piece_at_square {
+                                    dnd_state.origin_file = file;
+                                    dnd_state.origin_rank = rank;
 
-                                dnd_state.moved_piece_fen = fen;
-                                dnd_state.dnd_active = true;
+                                    dnd_state.moved_piece_fen = fen;
+                                    dnd_state.dnd_active = true;
 
-                                widget.queue_draw_region(&cairo::Region::create_rectangle(
-                                    &cairo::RectangleInt {
-                                        x: 0,
-                                        y: 0,
-                                        width: size as i32,
-                                        height: size as i32,
-                                    },
-                                ));
+                                    widget.queue_draw_region(&cairo::Region::create_rectangle(
+                                        &cairo::RectangleInt {
+                                            x: 0,
+                                            y: 0,
+                                            width: size as i32,
+                                            height: size as i32,
+                                        },
+                                    ));
+                                }
                             }
                         }
                     }
