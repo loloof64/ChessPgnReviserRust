@@ -174,7 +174,7 @@ impl ChessBoardPainter {
             let is_digit_value = value_ascii >= ascii_0 && value_ascii <= ascii_9;
 
             if is_digit_value {
-                col_index += self.skip_holes(value_ascii, col_index);
+                col_index += self.skip_holes(value_ascii);
             } else {
                 self.draw_single_piece(context, value, col_index, line_index, black_side);
                 col_index += 1;
@@ -182,10 +182,10 @@ impl ChessBoardPainter {
         }
     }
 
-    fn skip_holes(&self, value_ascii: u8, col_index: u8) -> u8 {
+    fn skip_holes(&self, value_ascii: u8) -> u8 {
         let ascii_0 = 48;
         let holes_count = value_ascii - ascii_0;
-        col_index + holes_count
+        holes_count
     }
 
     fn draw_single_piece(
