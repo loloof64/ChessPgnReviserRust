@@ -134,6 +134,7 @@ dependencies = [
  "cairo-rs",
  "failure",
  "gdk",
+ "gdk-pixbuf",
  "glib",
  "gtk",
  "pleco",

@@ -27,8 +27,10 @@ pub struct ChessState {
 }
 
 #[derive(Default)]
-struct DndState {
-    dnd_active: bool,
+pub struct DndState {
+    pub dnd_active: bool,
+    pub cursor_x: f64,
+    pub cursor_y: f64,
 }
 
 #[allow(dead_code)]
@@ -173,10 +175,14 @@ impl ChessBoard {
         let painter = self.build_painter();
         {
             let weak_canvas_state = Rc::downgrade(&self.model.canvas_state);
+            let weak_dnd_state = Rc::downgrade(&self.model.dnd_state);
             self.canvas.connect_draw(move |_source, context| {
                 if let Some(canvas_state) = weak_canvas_state.upgrade() {
-                    let canvas_state = canvas_state.borrow();
-                    painter.paint(&context, &canvas_state);
+                    if let Some(dnd_state) = weak_dnd_state.upgrade() {
+                        let canvas_state = canvas_state.borrow();
+                        let dnd_state = dnd_state.borrow();
+                        painter.paint(&context, &canvas_state, &dnd_state);
+                    }
                 }
 
                 Inhibit(false)
@@ -204,7 +210,7 @@ impl ChessBoard {
         let weak_dnd_state = Rc::downgrade(&self.model.dnd_state);
 
         self.canvas
-            .connect_button_press_event(move |_widget, event| {
+            .connect_button_press_event(move |widget, event| {
                 if let Some(dnd_state) = weak_dnd_state.upgrade() {
                     let dnd_is_to_activate;
                     {
@@ -212,12 +218,25 @@ impl ChessBoard {
                         dnd_is_to_activate = !dnd_state.dnd_active;
                     }
                     if dnd_is_to_activate {
-                        if let Some(_canvas_state) = weak_canvas_state.upgrade() {
+                        if let Some(canvas_state) = weak_canvas_state.upgrade() {
+                            let canvas_state = (*canvas_state).borrow();
                             let (x, y) = event.get_position();
-                            println!("Press => ({}, {})", x, y);
 
+                            let size = canvas_state.size;
+                            let cells_size = size as f64 / 9_f64;
                             let mut dnd_state = dnd_state.borrow_mut();
                             dnd_state.dnd_active = true;
+                            dnd_state.cursor_x = x - cells_size * 0.5;
+                            dnd_state.cursor_y = y - cells_size * 0.5;
+
+                            widget.queue_draw_region(&cairo::Region::create_rectangle(
+                                &cairo::RectangleInt {
+                                    x: 0,
+                                    y: 0,
+                                    width: size as i32,
+                                    height: size as i32,
+                                },
+                            ));
                         }
                     }
                 }
@@ -230,7 +249,7 @@ impl ChessBoard {
         let weak_dnd_state = Rc::downgrade(&self.model.dnd_state);
 
         self.canvas
-            .connect_button_release_event(move |_widget, event| {
+            .connect_button_release_event(move |widget, event| {
                 if let Some(dnd_state) = weak_dnd_state.upgrade() {
                     let dnd_active;
                     {
@@ -239,12 +258,25 @@ impl ChessBoard {
                     }
 
                     if dnd_active {
-                        if let Some(_canvas_state) = weak_canvas_state.upgrade() {
+                        if let Some(canvas_state) = weak_canvas_state.upgrade() {
+                            let canvas_state = (*canvas_state).borrow();
                             let (x, y) = event.get_position();
-                            println!("Release => ({}, {})", x, y);
 
+                            let size = canvas_state.size;
+                            let cells_size = size as f64 / 9_f64;
                             let mut dnd_state = dnd_state.borrow_mut();
                             dnd_state.dnd_active = false;
+                            dnd_state.cursor_x = x - cells_size * 0.5;
+                            dnd_state.cursor_y = y - cells_size * 0.5;
+
+                            widget.queue_draw_region(&cairo::Region::create_rectangle(
+                                &cairo::RectangleInt {
+                                    x: 0,
+                                    y: 0,
+                                    width: size as i32,
+                                    height: size as i32,
+                                },
+                            ));
                         }
                     }
                 }
@@ -257,7 +289,7 @@ impl ChessBoard {
         let weak_dnd_state = Rc::downgrade(&self.model.dnd_state);
 
         self.canvas
-            .connect_motion_notify_event(move |_widget, event| {
+            .connect_motion_notify_event(move |widget, event| {
                 if let Some(dnd_state) = weak_dnd_state.upgrade() {
                     let dnd_active;
                     {
@@ -266,9 +298,25 @@ impl ChessBoard {
                     }
 
                     if dnd_active {
-                        if let Some(_canvas_state) = weak_canvas_state.upgrade() {
+                        if let Some(canvas_state) = weak_canvas_state.upgrade() {
+                            let canvas_state = (*canvas_state).borrow();
                             let (x, y) = event.get_position();
-                            println!("Move => ({}, {})", x, y);
+                            let size = canvas_state.size;
+                            let cells_size = size as f64 / 9_f64;
+
+                            let mut dnd_state = dnd_state.borrow_mut();
+                            dnd_state.dnd_active = true;
+                            dnd_state.cursor_x = x - cells_size * 0.5;
+                            dnd_state.cursor_y = y - cells_size * 0.5;
+
+                            widget.queue_draw_region(&cairo::Region::create_rectangle(
+                                &cairo::RectangleInt {
+                                    x: 0,
+                                    y: 0,
+                                    width: size as i32,
+                                    height: size as i32,
+                                },
+                            ));
                         }
                     }
                 }
