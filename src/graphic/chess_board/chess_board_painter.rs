@@ -157,7 +157,7 @@ impl ChessBoardPainter {
         }
     }
 
-    pub fn get_pieces_values_from_fen<'a>(
+    fn get_pieces_values_from_fen<'a>(
         &self,
         position_fen: &'a str,
     )  -> Vec<&'a str> {
@@ -165,7 +165,7 @@ impl ChessBoardPainter {
         board_value.split("/").collect::<Vec<_>>()
     }
 
-    pub fn draw_pieces_line(
+    fn draw_pieces_line(
         &self,
         context: &Context,
         line: &str,
@@ -173,7 +173,7 @@ impl ChessBoardPainter {
         black_side: BlackSide,
     ) {
         let line_values = line.chars();
-        let mut col_index = 0;
+        let mut col_index = 0_u8;
         let ascii_0 = 48;
         let ascii_9 = 57;
 
@@ -182,32 +182,52 @@ impl ChessBoardPainter {
             let is_digit_value = value_ascii >= ascii_0 && value_ascii <= ascii_9;
 
             if is_digit_value {
-                let holes_count = value_ascii - ascii_0;
-                col_index += holes_count;
+                col_index += self.skip_holes(value_ascii, col_index);
             } else {
-                let col = if black_side == BlackSide::BlackBottom {
-                    7_f64 - col_index as f64
-                } else {
-                    col_index as f64
-                };
-                let row = if black_side == BlackSide::BlackBottom {
-                    7_f64 - line_index as f64
-                } else {
-                    line_index as f64
-                };
-
-                let cells_size = self.cells_size as f64;
-                self.draw_single_piece(
-                    context,
-                    self.pieces_images
-                        .get_image(value)
-                        .expect(format!("could not get image for {}", value).as_str()),
-                    cells_size * (0.5 + col),
-                    cells_size * (0.5 + row),
-                );
-                col_index += 1;
+                col_index += self.draw_single_piece(context, value, col_index, line_index, black_side);
             }
         }
+    }
+
+    fn skip_holes(
+        &self,
+        value_ascii: u8,
+        col_index: u8
+    ) -> u8 {
+        let ascii_0 = 48;
+        let holes_count = value_ascii - ascii_0;
+        col_index + holes_count
+    }
+
+    fn draw_single_piece(
+        &self,
+        context: &Context,
+        value: char,
+        col_index: u8,
+        line_index: usize,
+        black_side: BlackSide,
+    ) -> u8 {
+        let col = if black_side == BlackSide::BlackBottom {
+            7_f64 - col_index as f64
+        } else {
+            col_index as f64
+        };
+        let row = if black_side == BlackSide::BlackBottom {
+            7_f64 - line_index as f64
+        } else {
+            line_index as f64
+        };
+
+        let cells_size = self.cells_size as f64;
+        self.draw_single_piece_image(
+            context,
+            self.pieces_images
+                .get_image(value)
+                .expect(format!("could not get image for {}", value).as_str()),
+            cells_size * (0.5 + col),
+            cells_size * (0.5 + row),
+        );
+        col_index + 1
     }
 
     pub fn draw_player_turn(&self, context: &Context, position: &str) {
@@ -318,7 +338,7 @@ impl ChessBoardPainter {
         }
     }
 
-    fn draw_single_piece(&self, context: &Context, image: ImageSurface, x: f64, y: f64) {
+    fn draw_single_piece_image(&self, context: &Context, image: ImageSurface, x: f64, y: f64) {
         let origin = 0f64;
 
         context.save();
