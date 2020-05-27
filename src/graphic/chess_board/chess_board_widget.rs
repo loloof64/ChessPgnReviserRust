@@ -119,9 +119,7 @@ impl Widget for ChessBoard {
 
     fn init_view(&mut self) {
         {
-            let state = (*self.model.state).borrow();
-            let size = state.size;
-            self.canvas.set_size_request(size as i32, size as i32);
+            self.set_canvas_size();
         }
 
         self.canvas.add_events(
@@ -130,11 +128,8 @@ impl Widget for ChessBoard {
                 | EventMask::POINTER_MOTION_MASK,
         );
 
-        let state = (*self.model.state).borrow();
-        let size = state.size;
-        let mut painter = ChessBoardPainter::new(size / 9);
-        painter.build_images();
-
+        let painter = self.build_painter();
+        
         {
             let weak_state = Rc::downgrade(&self.model.state);
             self.canvas.connect_draw(move |_source, context| {
@@ -167,5 +162,20 @@ impl ChessBoard {
                 width: size as i32,
                 height: size as i32,
             }));
+    }
+
+    pub fn set_canvas_size(&self) {
+        let state = (*self.model.state).borrow();
+        let size = state.size;
+        self.canvas.set_size_request(size as i32, size as i32);
+    }
+
+    pub fn build_painter(&self) -> ChessBoardPainter {
+        let state = (*self.model.state).borrow();
+        let size = state.size;
+        let mut painter = ChessBoardPainter::new(size / 9);
+        painter.build_images();
+
+        painter
     }
 }
