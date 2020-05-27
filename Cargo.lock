@@ -133,6 +133,7 @@ version = "0.1.0"
 dependencies = [
  "cairo-rs",
  "failure",
+ "gdk",
  "glib",
  "gtk",
  "pleco",

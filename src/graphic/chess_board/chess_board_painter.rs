@@ -6,7 +6,7 @@ use resvg::usvg::ShapeRendering;
 use resvg::{usvg::Tree, FitTo, Options};
 use std::collections::HashMap;
 
-use super::chess_board_widget::BlackSide;
+use super::chess_board_widget::{BlackSide, ChessState};
 
 #[derive(Debug, Fail)]
 pub enum ChessPiecesError {
@@ -109,19 +109,26 @@ impl ChessBoardPainter {
         self.pieces_images.build_images(self.cells_size);
     }
 
-    pub fn draw_background(&self, context: &Context, background_color: (f64, f64, f64)) {
+    pub fn paint(&self, context: &Context, state: &ChessState) {
+        self.draw_background(context, state);
+        self.draw_cells(context, state);
+        self.draw_coordinates(context, state);
+        self.draw_player_turn(context, state);
+        self.draw_pieces(context, state);
+    }
+
+    pub fn draw_background(&self, context: &Context, state: &ChessState) {
+        let background_color = state.background_color;
         let (bg_red, bg_green, bg_blue) = background_color;
 
         context.set_source_rgb(bg_red, bg_green, bg_blue);
         context.paint();
     }
 
-    pub fn draw_cells(
-        &self,
-        context: &Context,
-        white_cells_color: (f64, f64, f64),
-        black_cells_color: (f64, f64, f64),
-    ) {
+    pub fn draw_cells(&self, context: &Context, state: &ChessState) {
+        let white_cells_color = state.white_cells_color;
+        let black_cells_color = state.black_cells_color;
+
         let (w_cells_red, w_cells_green, w_cells_blue) = white_cells_color;
         let (b_cells_red, b_cells_green, b_cells_blue) = black_cells_color;
 
@@ -144,7 +151,10 @@ impl ChessBoardPainter {
         }
     }
 
-    pub fn draw_pieces(&self, context: &Context, position: &str, black_side: BlackSide) {
+    pub fn draw_pieces(&self, context: &Context, state: &ChessState) {
+        let position = state.board.fen();
+        let position = position.as_str();
+        let black_side = state.black_side;
         let pieces_lines = self.get_pieces_values_from_fen(position);
 
         for (line_index, line) in pieces_lines.iter().enumerate() {
@@ -152,7 +162,9 @@ impl ChessBoardPainter {
         }
     }
 
-    pub fn draw_player_turn(&self, context: &Context, position: &str) {
+    pub fn draw_player_turn(&self, context: &Context, state: &ChessState) {
+        let position = state.board.fen();
+        let position = position.as_str();
         let turn_str = position.split(" ").skip(1).take(1).collect::<Vec<_>>()[0];
         let is_white_turn = turn_str == "w";
 
@@ -176,15 +188,12 @@ impl ChessBoardPainter {
         context.fill();
     }
 
-    pub fn draw_coordinates(
-        &self,
-        context: &Context,
-        coordinates_color: (f64, f64, f64),
-        black_side: BlackSide,
-    ) {
+    pub fn draw_coordinates(&self, context: &Context, state: &ChessState) {
+        let coordinates_color = state.coordinates_color;
+
         self.prepare_coordinates_drawing(&context, coordinates_color);
-        self.draw_files_coordinates(&context, black_side);
-        self.draw_ranks_coordinates(&context, black_side);
+        self.draw_files_coordinates(&context, &state);
+        self.draw_ranks_coordinates(&context, &state);
     }
 
     fn get_pieces_values_from_fen<'a>(&self, position_fen: &'a str) -> Vec<&'a str> {
@@ -245,11 +254,7 @@ impl ChessBoardPainter {
         );
     }
 
-    fn get_col(
-        &self,
-        col_index: u8,
-        black_side: BlackSide
-    ) -> u8 {
+    fn get_col(&self, col_index: u8, black_side: BlackSide) -> u8 {
         if black_side == BlackSide::BlackBottom {
             7 - col_index
         } else {
@@ -257,11 +262,7 @@ impl ChessBoardPainter {
         }
     }
 
-    fn get_row(
-        &self,
-        line_index: u8,
-        black_side: BlackSide
-    ) -> u8 {
+    fn get_row(&self, line_index: u8, black_side: BlackSide) -> u8 {
         if black_side == BlackSide::BlackBottom {
             7 - line_index
         } else {
@@ -290,9 +291,10 @@ impl ChessBoardPainter {
         ));
     }
 
-    fn draw_files_coordinates(&self, context: &Context, black_side: BlackSide) {
+    fn draw_files_coordinates(&self, context: &Context, state: &ChessState) {
         let cells_size = self.cells_size as f64;
         let ascii_uppercase_a = 65u8;
+        let black_side = state.black_side;
 
         for col in 0..8 {
             let file = if black_side == BlackSide::BlackBottom {
@@ -316,9 +318,10 @@ impl ChessBoardPainter {
         }
     }
 
-    fn draw_ranks_coordinates(&self, context: &Context, black_side: BlackSide) {
+    fn draw_ranks_coordinates(&self, context: &Context, state: &ChessState) {
         let cells_size = self.cells_size as f64;
         let ascii_1 = 49u8;
+        let black_side = state.black_side;
 
         for row in 0..8 {
             let rank = if black_side == BlackSide::BlackBottom {

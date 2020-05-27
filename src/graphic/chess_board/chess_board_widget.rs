@@ -1,3 +1,4 @@
+use gdk::EventMask;
 use gtk::prelude::*;
 use gtk::Inhibit;
 use pleco::Board;
@@ -15,18 +16,22 @@ pub enum BlackSide {
     BlackBottom,
 }
 
-#[allow(dead_code)]
-pub struct ChessBoardModel {
-    size: u32,
-    background_color: (f64, f64, f64),
-    white_cells_color: (f64, f64, f64),
-    black_cells_color: (f64, f64, f64),
-    coordinates_color: (f64, f64, f64),
-    board: Rc<RefCell<Board>>,
-    black_side: Rc<RefCell<BlackSide>>,
+pub struct ChessState {
+    pub size: u32,
+    pub background_color: (f64, f64, f64),
+    pub white_cells_color: (f64, f64, f64),
+    pub black_cells_color: (f64, f64, f64),
+    pub coordinates_color: (f64, f64, f64),
+    pub board: Board,
+    pub black_side: BlackSide,
 }
 
-pub struct ChessBoardModelBuilder {
+#[allow(dead_code)]
+pub struct ChessBoardModel {
+    state: Rc<RefCell<ChessState>>,
+}
+
+pub struct ChessStateBuilder {
     size: u32,
     background_color: (f64, f64, f64),
     white_cells_color: (f64, f64, f64),
@@ -36,9 +41,9 @@ pub struct ChessBoardModelBuilder {
 }
 
 #[allow(dead_code)]
-impl ChessBoardModelBuilder {
+impl ChessStateBuilder {
     fn new() -> Self {
-        ChessBoardModelBuilder {
+        ChessStateBuilder {
             size: 300,
             background_color: (0.5, 0.4, 0.9),
             white_cells_color: (1.0, 0.85, 0.6),
@@ -48,15 +53,15 @@ impl ChessBoardModelBuilder {
         }
     }
 
-    fn build(self) -> ChessBoardModel {
-        ChessBoardModel {
+    fn build(self) -> ChessState {
+        ChessState {
             size: self.size,
             background_color: self.background_color,
             white_cells_color: self.white_cells_color,
             black_cells_color: self.black_cells_color,
             coordinates_color: self.coordinates_color,
-            black_side: Rc::new(RefCell::new(self.black_side)),
-            board: Rc::new(RefCell::new(Board::start_pos())),
+            black_side: self.black_side,
+            board: Board::start_pos(),
         }
     }
 
@@ -93,17 +98,19 @@ pub enum ChessBoardMsg {
 #[widget]
 impl Widget for ChessBoard {
     fn model(board_size: u32) -> ChessBoardModel {
-        let mut model_builder = ChessBoardModelBuilder::new();
-        model_builder.set_board_size(board_size);
-        model_builder.build()
+        let mut state_builder = ChessStateBuilder::new();
+        state_builder.set_board_size(board_size);
+        let state = Rc::new(RefCell::new(state_builder.build()));
+
+        ChessBoardModel { state }
     }
 
     fn update(&mut self, event: ChessBoardMsg) {
         match event {
             ChessBoardMsg::SetBlackSide(side) => {
                 {
-                    let mut black_side_from_model = (*self.model.black_side).borrow_mut();
-                    *black_side_from_model = side;
+                    let mut state_from_model = (*self.model.state).borrow_mut();
+                    (*state_from_model).black_side = side;
                 }
                 self.repaint();
             }
@@ -111,32 +118,34 @@ impl Widget for ChessBoard {
     }
 
     fn init_view(&mut self) {
-        self.canvas
-            .set_size_request(self.model.size as i32, self.model.size as i32);
+        {
+            let state = (*self.model.state).borrow();
+            let size = state.size;
+            self.canvas.set_size_request(size as i32, size as i32);
+        }
 
-        let background_color = self.model.background_color;
-        let white_cells_color = self.model.white_cells_color;
-        let black_cells_color = self.model.black_cells_color;
-        let coordinates_color = self.model.coordinates_color;
-        let size = self.model.size;
+        self.canvas.add_events(
+            EventMask::BUTTON_PRESS_MASK
+                | EventMask::BUTTON_RELEASE_MASK
+                | EventMask::POINTER_MOTION_MASK,
+        );
+
+        let state = (*self.model.state).borrow();
+        let size = state.size;
         let mut painter = ChessBoardPainter::new(size / 9);
         painter.build_images();
-        let board = Rc::clone(&self.model.board);
-        let black_side = Rc::clone(&self.model.black_side);
 
-        self.canvas.connect_draw({
-            move |_source, context| {
-                let black_side = (*black_side).borrow();
+        {
+            let weak_state = Rc::downgrade(&self.model.state);
+            self.canvas.connect_draw(move |_source, context| {
+                if let Some(state) = weak_state.upgrade() {
+                    let state = state.borrow();
+                    painter.paint(&context, &state);
+                }
 
-                let board = board.borrow();
-                painter.draw_background(context, background_color);
-                painter.draw_cells(context, white_cells_color, black_cells_color);
-                painter.draw_player_turn(context, board.fen().as_str());
-                painter.draw_pieces(context, board.fen().as_str(), *black_side);
-                painter.draw_coordinates(context, coordinates_color, *black_side);
-                Inhibit(true)
-            }
-        });
+                Inhibit(false)
+            });
+        }
     }
 
     view! {
@@ -148,12 +157,15 @@ impl Widget for ChessBoard {
 
 impl ChessBoard {
     pub fn repaint(&self) {
+        let state = (*self.model.state).borrow();
+        let size = state.size;
+
         self.canvas
             .queue_draw_region(&cairo::Region::create_rectangle(&cairo::RectangleInt {
                 x: 0,
                 y: 0,
-                width: self.model.size as i32,
-                height: self.model.size as i32,
+                width: size as i32,
+                height: size as i32,
             }));
     }
 }
