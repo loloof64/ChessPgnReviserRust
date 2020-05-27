@@ -144,53 +144,68 @@ impl ChessBoardPainter {
         }
     }
 
-    pub fn draw_pieces(&self, context: &Context, position: &str, black_side: BlackSide) {
-        let board_value = position.split(" ").take(1).collect::<Vec<_>>()[0];
-        let pieces_lines = board_value.split("/").collect::<Vec<_>>();
+    pub fn draw_pieces(
+        &self, 
+        context: &Context, 
+        position: &str,
+        black_side: BlackSide,
+    ) {
+        let pieces_lines = self.get_pieces_values_from_fen(position);
 
+        for (line_index, line) in pieces_lines.iter().enumerate() {
+            self.draw_pieces_line(context, line, line_index, black_side);
+        }
+    }
+
+    pub fn get_pieces_values_from_fen<'a>(
+        &self,
+        position_fen: &'a str,
+    )  -> Vec<&'a str> {
+        let board_value = position_fen.split(" ").take(1).collect::<Vec<_>>()[0];
+        board_value.split("/").collect::<Vec<_>>()
+    }
+
+    pub fn draw_pieces_line(
+        &self,
+        context: &Context,
+        line: &str,
+        line_index: usize,
+        black_side: BlackSide,
+    ) {
+        let line_values = line.chars();
+        let mut col_index = 0;
         let ascii_0 = 48;
         let ascii_9 = 57;
-        for (line_index, line) in pieces_lines.iter().enumerate() {
-            let line_values = line.chars();
-            let mut col_index = 0;
 
-            for value in line_values {
-                let value_ascii = value as u8;
-                let is_digit_value = value_ascii >= ascii_0 && value_ascii <= ascii_9;
+        for value in line_values {
+            let value_ascii = value as u8;
+            let is_digit_value = value_ascii >= ascii_0 && value_ascii <= ascii_9;
 
-                if !is_digit_value {
-                    let col = col_index;
-                    let row = line_index;
-
-                    let cells_size = self.cells_size as f64;
-                    let x = cells_size
-                        * (0.5
-                            + if black_side == BlackSide::BlackBottom {
-                                7 - col
-                            } else {
-                                col
-                            } as f64);
-                    let y = cells_size
-                        * (0.5
-                            + if black_side == BlackSide::BlackBottom {
-                                7 - row
-                            } else {
-                                row
-                            } as f64);
-
-                    self.draw_single_piece(
-                        context,
-                        self.pieces_images
-                            .get_image(value)
-                            .expect(format!("could not get image for {}", value).as_str()),
-                        x,
-                        y,
-                    );
-                    col_index += 1;
+            if is_digit_value {
+                let holes_count = value_ascii - ascii_0;
+                col_index += holes_count;
+            } else {
+                let col = if black_side == BlackSide::BlackBottom {
+                    7_f64 - col_index as f64
                 } else {
-                    let holes_count = value_ascii - ascii_0;
-                    col_index += holes_count;
-                }
+                    col_index as f64
+                };
+                let row = if black_side == BlackSide::BlackBottom {
+                    7_f64 - line_index as f64
+                } else {
+                    line_index as f64
+                };
+
+                let cells_size = self.cells_size as f64;
+                self.draw_single_piece(
+                    context,
+                    self.pieces_images
+                        .get_image(value)
+                        .expect(format!("could not get image for {}", value).as_str()),
+                    cells_size * (0.5 + col),
+                    cells_size * (0.5 + row),
+                );
+                col_index += 1;
             }
         }
     }
