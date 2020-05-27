@@ -118,29 +118,14 @@ impl Widget for ChessBoard {
     }
 
     fn init_view(&mut self) {
-        {
-            self.set_canvas_size();
-        }
-
+        self.set_canvas_size();
         self.canvas.add_events(
             EventMask::BUTTON_PRESS_MASK
                 | EventMask::BUTTON_RELEASE_MASK
                 | EventMask::POINTER_MOTION_MASK,
         );
 
-        let painter = self.build_painter();
-        
-        {
-            let weak_state = Rc::downgrade(&self.model.state);
-            self.canvas.connect_draw(move |_source, context| {
-                if let Some(state) = weak_state.upgrade() {
-                    let state = state.borrow();
-                    painter.paint(&context, &state);
-                }
-
-                Inhibit(false)
-            });
-        }
+        self.set_canvas_draw_implementation();
     }
 
     view! {
@@ -177,5 +162,20 @@ impl ChessBoard {
         painter.build_images();
 
         painter
+    }
+
+    pub fn set_canvas_draw_implementation(&self) {
+        let painter = self.build_painter();
+        {
+            let weak_state = Rc::downgrade(&self.model.state);
+            self.canvas.connect_draw(move |_source, context| {
+                if let Some(state) = weak_state.upgrade() {
+                    let state = state.borrow();
+                    painter.paint(&context, &state);
+                }
+
+                Inhibit(false)
+            });
+        }
     }
 }
