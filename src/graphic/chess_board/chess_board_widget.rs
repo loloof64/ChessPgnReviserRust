@@ -26,9 +26,15 @@ pub struct ChessState {
     pub black_side: BlackSide,
 }
 
+#[derive(Default)]
+struct DndState {
+    dnd_active: bool,
+}
+
 #[allow(dead_code)]
 pub struct ChessBoardModel {
-    state: Rc<RefCell<ChessState>>,
+    canvas_state: Rc<RefCell<ChessState>>,
+    dnd_state: Rc<RefCell<DndState>>,
 }
 
 pub struct ChessStateBuilder {
@@ -100,17 +106,21 @@ impl Widget for ChessBoard {
     fn model(board_size: u32) -> ChessBoardModel {
         let mut state_builder = ChessStateBuilder::new();
         state_builder.set_board_size(board_size);
-        let state = Rc::new(RefCell::new(state_builder.build()));
+        let canvas_state = Rc::new(RefCell::new(state_builder.build()));
+        let dnd_state = Rc::new(RefCell::new(DndState::default()));
 
-        ChessBoardModel { state }
+        ChessBoardModel {
+            canvas_state,
+            dnd_state,
+        }
     }
 
     fn update(&mut self, event: ChessBoardMsg) {
         match event {
             ChessBoardMsg::SetBlackSide(side) => {
                 {
-                    let mut state_from_model = (*self.model.state).borrow_mut();
-                    (*state_from_model).black_side = side;
+                    let mut canvas_state_from_model = (*self.model.canvas_state).borrow_mut();
+                    (*canvas_state_from_model).black_side = side;
                 }
                 self.repaint();
             }
@@ -132,8 +142,8 @@ impl Widget for ChessBoard {
 
 impl ChessBoard {
     pub fn repaint(&self) {
-        let state = (*self.model.state).borrow();
-        let size = state.size;
+        let canvas_state = (*self.model.canvas_state).borrow();
+        let size = canvas_state.size;
 
         self.canvas
             .queue_draw_region(&cairo::Region::create_rectangle(&cairo::RectangleInt {
@@ -145,14 +155,14 @@ impl ChessBoard {
     }
 
     pub fn set_canvas_size(&self) {
-        let state = (*self.model.state).borrow();
-        let size = state.size;
+        let canvas_state = (*self.model.canvas_state).borrow();
+        let size = canvas_state.size;
         self.canvas.set_size_request(size as i32, size as i32);
     }
 
     pub fn build_painter(&self) -> ChessBoardPainter {
-        let state = (*self.model.state).borrow();
-        let size = state.size;
+        let canvas_state = (*self.model.canvas_state).borrow();
+        let size = canvas_state.size;
         let mut painter = ChessBoardPainter::new(size / 9);
         painter.build_images();
 
@@ -162,11 +172,11 @@ impl ChessBoard {
     pub fn set_canvas_draw_implementation(&self) {
         let painter = self.build_painter();
         {
-            let weak_state = Rc::downgrade(&self.model.state);
+            let weak_canvas_state = Rc::downgrade(&self.model.canvas_state);
             self.canvas.connect_draw(move |_source, context| {
-                if let Some(state) = weak_state.upgrade() {
-                    let state = state.borrow();
-                    painter.paint(&context, &state);
+                if let Some(canvas_state) = weak_canvas_state.upgrade() {
+                    let canvas_state = canvas_state.borrow();
+                    painter.paint(&context, &canvas_state);
                 }
 
                 Inhibit(false)
@@ -190,36 +200,77 @@ impl ChessBoard {
     }
 
     fn add_canvas_mouse_press_implementation(&self) {
-        let weak_state = Rc::downgrade(&self.model.state);
+        let weak_canvas_state = Rc::downgrade(&self.model.canvas_state);
+        let weak_dnd_state = Rc::downgrade(&self.model.dnd_state);
+
         self.canvas
             .connect_button_press_event(move |_widget, event| {
-                if let Some(_state) = weak_state.upgrade() {
-                    let (x, y) = event.get_position();
-                    println!("Press => ({}, {})", x ,y);
+                if let Some(dnd_state) = weak_dnd_state.upgrade() {
+                    let dnd_is_to_activate;
+                    {
+                        let dnd_state = (*dnd_state).borrow();
+                        dnd_is_to_activate = !dnd_state.dnd_active;
+                    }
+                    if dnd_is_to_activate {
+                        if let Some(_canvas_state) = weak_canvas_state.upgrade() {
+                            let (x, y) = event.get_position();
+                            println!("Press => ({}, {})", x, y);
+
+                            let mut dnd_state = dnd_state.borrow_mut();
+                            dnd_state.dnd_active = true;
+                        }
+                    }
                 }
                 Inhibit(false)
             });
     }
 
     fn add_canvas_mouse_release_implementation(&self) {
-        let weak_state = Rc::downgrade(&self.model.state);
+        let weak_canvas_state = Rc::downgrade(&self.model.canvas_state);
+        let weak_dnd_state = Rc::downgrade(&self.model.dnd_state);
+
         self.canvas
             .connect_button_release_event(move |_widget, event| {
-                if let Some(_state) = weak_state.upgrade() {
-                    let (x, y) = event.get_position();
-                    println!("Release => ({}, {})", x ,y);
+                if let Some(dnd_state) = weak_dnd_state.upgrade() {
+                    let dnd_active;
+                    {
+                        let dnd_state = (*dnd_state).borrow();
+                        dnd_active = dnd_state.dnd_active;
+                    }
+
+                    if dnd_active {
+                        if let Some(_canvas_state) = weak_canvas_state.upgrade() {
+                            let (x, y) = event.get_position();
+                            println!("Release => ({}, {})", x, y);
+
+                            let mut dnd_state = dnd_state.borrow_mut();
+                            dnd_state.dnd_active = false;
+                        }
+                    }
                 }
                 Inhibit(false)
             });
     }
 
     fn add_canvas_mouse_move_implementation(&self) {
-        let weak_state = Rc::downgrade(&self.model.state);
+        let weak_canvas_state = Rc::downgrade(&self.model.canvas_state);
+        let weak_dnd_state = Rc::downgrade(&self.model.dnd_state);
+
         self.canvas
             .connect_motion_notify_event(move |_widget, event| {
-                if let Some(_state) = weak_state.upgrade() {
-                    let (x, y) = event.get_position();
-                    println!("Move => ({}, {})", x ,y);
+                if let Some(dnd_state) = weak_dnd_state.upgrade() {
+                    let dnd_active;
+                    {
+                        let dnd_state = (*dnd_state).borrow();
+                        dnd_active = dnd_state.dnd_active;
+                    }
+
+                    if dnd_active {
+                        if let Some(_canvas_state) = weak_canvas_state.upgrade() {
+                            let (x, y) = event.get_position();
+                            println!("Move => ({}, {})", x, y);
+                        }
+                    }
                 }
                 Inhibit(false)
             });
