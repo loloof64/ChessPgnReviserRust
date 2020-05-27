@@ -119,7 +119,6 @@ impl Widget for ChessBoard {
         let black_cells_color = self.model.black_cells_color;
         let coordinates_color = self.model.coordinates_color;
         let size = self.model.size;
-        
         let mut painter = ChessBoardPainter::new(size / 9);
         painter.build_images();
         let board = Rc::clone(&self.model.board);

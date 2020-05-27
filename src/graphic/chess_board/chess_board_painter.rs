@@ -144,12 +144,7 @@ impl ChessBoardPainter {
         }
     }
 
-    pub fn draw_pieces(
-        &self, 
-        context: &Context, 
-        position: &str,
-        black_side: BlackSide,
-    ) {
+    pub fn draw_pieces(&self, context: &Context, position: &str, black_side: BlackSide) {
         let pieces_lines = self.get_pieces_values_from_fen(position);
 
         for (line_index, line) in pieces_lines.iter().enumerate() {
@@ -157,10 +152,7 @@ impl ChessBoardPainter {
         }
     }
 
-    fn get_pieces_values_from_fen<'a>(
-        &self,
-        position_fen: &'a str,
-    )  -> Vec<&'a str> {
+    fn get_pieces_values_from_fen<'a>(&self, position_fen: &'a str) -> Vec<&'a str> {
         let board_value = position_fen.split(" ").take(1).collect::<Vec<_>>()[0];
         board_value.split("/").collect::<Vec<_>>()
     }
@@ -184,16 +176,13 @@ impl ChessBoardPainter {
             if is_digit_value {
                 col_index += self.skip_holes(value_ascii, col_index);
             } else {
-                col_index += self.draw_single_piece(context, value, col_index, line_index, black_side);
+                self.draw_single_piece(context, value, col_index, line_index, black_side);
+                col_index += 1;
             }
         }
     }
 
-    fn skip_holes(
-        &self,
-        value_ascii: u8,
-        col_index: u8
-    ) -> u8 {
+    fn skip_holes(&self, value_ascii: u8, col_index: u8) -> u8 {
         let ascii_0 = 48;
         let holes_count = value_ascii - ascii_0;
         col_index + holes_count
@@ -206,7 +195,7 @@ impl ChessBoardPainter {
         col_index: u8,
         line_index: usize,
         black_side: BlackSide,
-    ) -> u8 {
+    ) {
         let col = if black_side == BlackSide::BlackBottom {
             7_f64 - col_index as f64
         } else {
@@ -227,7 +216,6 @@ impl ChessBoardPainter {
             cells_size * (0.5 + col),
             cells_size * (0.5 + row),
         );
-        col_index + 1
     }
 
     pub fn draw_player_turn(&self, context: &Context, position: &str) {
