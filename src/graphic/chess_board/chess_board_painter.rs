@@ -115,7 +115,7 @@ impl ChessBoardPainter {
         self.draw_coordinates(context, chess_state);
         self.draw_player_turn(context, chess_state);
         self.draw_pieces(context, chess_state);
-        self.draw_cursor_piece(context, chess_state, dnd_state);
+        self.draw_cursor_piece(context, dnd_state);
     }
 
     fn draw_background(&self, context: &Context, chess_state: &ChessState) {
@@ -197,9 +197,9 @@ impl ChessBoardPainter {
         self.draw_ranks_coordinates(&context, &chess_state);
     }
 
-    fn draw_cursor_piece(&self, context: &Context, chess_state: &ChessState, dnd_state: &DndState) {
+    fn draw_cursor_piece(&self, context: &Context, dnd_state: &DndState) {
         if dnd_state.dnd_active {
-            let image = self.get_image_cursor_for_fen('N');
+            let image = self.get_image_cursor_for_fen(dnd_state.moved_piece_fen);
             let origin = 0f64;
 
             context.save();

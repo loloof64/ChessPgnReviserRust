@@ -1,7 +1,10 @@
 use gdk::EventMask;
 use gtk::prelude::*;
 use gtk::Inhibit;
-use pleco::Board;
+use pleco::{
+    core::{sq::SQ},
+    Board,
+};
 use relm::Widget;
 use relm_derive::{widget, Msg};
 
@@ -31,11 +34,14 @@ pub struct DndState {
     pub dnd_active: bool,
     pub cursor_x: f64,
     pub cursor_y: f64,
+    pub origin_file: u8,
+    pub origin_rank: u8,
+    pub moved_piece_fen: char,
 }
 
 #[allow(dead_code)]
 pub struct ChessBoardModel {
-    canvas_state: Rc<RefCell<ChessState>>,
+    chess_state: Rc<RefCell<ChessState>>,
     dnd_state: Rc<RefCell<DndState>>,
 }
 
@@ -108,11 +114,11 @@ impl Widget for ChessBoard {
     fn model(board_size: u32) -> ChessBoardModel {
         let mut state_builder = ChessStateBuilder::new();
         state_builder.set_board_size(board_size);
-        let canvas_state = Rc::new(RefCell::new(state_builder.build()));
+        let chess_state = Rc::new(RefCell::new(state_builder.build()));
         let dnd_state = Rc::new(RefCell::new(DndState::default()));
 
         ChessBoardModel {
-            canvas_state,
+            chess_state,
             dnd_state,
         }
     }
@@ -121,8 +127,8 @@ impl Widget for ChessBoard {
         match event {
             ChessBoardMsg::SetBlackSide(side) => {
                 {
-                    let mut canvas_state_from_model = (*self.model.canvas_state).borrow_mut();
-                    (*canvas_state_from_model).black_side = side;
+                    let mut chess_state_from_model = (*self.model.chess_state).borrow_mut();
+                    (*chess_state_from_model).black_side = side;
                 }
                 self.repaint();
             }
@@ -144,8 +150,8 @@ impl Widget for ChessBoard {
 
 impl ChessBoard {
     pub fn repaint(&self) {
-        let canvas_state = (*self.model.canvas_state).borrow();
-        let size = canvas_state.size;
+        let chess_state = (*self.model.chess_state).borrow();
+        let size = chess_state.size;
 
         self.canvas
             .queue_draw_region(&cairo::Region::create_rectangle(&cairo::RectangleInt {
@@ -157,14 +163,14 @@ impl ChessBoard {
     }
 
     pub fn set_canvas_size(&self) {
-        let canvas_state = (*self.model.canvas_state).borrow();
-        let size = canvas_state.size;
+        let chess_state = (*self.model.chess_state).borrow();
+        let size = chess_state.size;
         self.canvas.set_size_request(size as i32, size as i32);
     }
 
     pub fn build_painter(&self) -> ChessBoardPainter {
-        let canvas_state = (*self.model.canvas_state).borrow();
-        let size = canvas_state.size;
+        let chess_state = (*self.model.chess_state).borrow();
+        let size = chess_state.size;
         let mut painter = ChessBoardPainter::new(size / 9);
         painter.build_images();
 
@@ -174,14 +180,14 @@ impl ChessBoard {
     pub fn set_canvas_draw_implementation(&self) {
         let painter = self.build_painter();
         {
-            let weak_canvas_state = Rc::downgrade(&self.model.canvas_state);
+            let weak_chess_state = Rc::downgrade(&self.model.chess_state);
             let weak_dnd_state = Rc::downgrade(&self.model.dnd_state);
             self.canvas.connect_draw(move |_source, context| {
-                if let Some(canvas_state) = weak_canvas_state.upgrade() {
+                if let Some(chess_state) = weak_chess_state.upgrade() {
                     if let Some(dnd_state) = weak_dnd_state.upgrade() {
-                        let canvas_state = canvas_state.borrow();
+                        let chess_state = chess_state.borrow();
                         let dnd_state = dnd_state.borrow();
-                        painter.paint(&context, &canvas_state, &dnd_state);
+                        painter.paint(&context, &chess_state, &dnd_state);
                     }
                 }
 
@@ -206,7 +212,7 @@ impl ChessBoard {
     }
 
     fn add_canvas_mouse_press_implementation(&self) {
-        let weak_canvas_state = Rc::downgrade(&self.model.canvas_state);
+        let weak_chess_state = Rc::downgrade(&self.model.chess_state);
         let weak_dnd_state = Rc::downgrade(&self.model.dnd_state);
 
         self.canvas
@@ -218,25 +224,51 @@ impl ChessBoard {
                         dnd_is_to_activate = !dnd_state.dnd_active;
                     }
                     if dnd_is_to_activate {
-                        if let Some(canvas_state) = weak_canvas_state.upgrade() {
-                            let canvas_state = (*canvas_state).borrow();
+                        if let Some(chess_state) = weak_chess_state.upgrade() {
+                            let chess_state = (*chess_state).borrow();
                             let (x, y) = event.get_position();
 
-                            let size = canvas_state.size;
+                            let size = chess_state.size;
                             let cells_size = size as f64 / 9_f64;
                             let mut dnd_state = dnd_state.borrow_mut();
-                            dnd_state.dnd_active = true;
+
                             dnd_state.cursor_x = x - cells_size * 0.5;
                             dnd_state.cursor_y = y - cells_size * 0.5;
 
-                            widget.queue_draw_region(&cairo::Region::create_rectangle(
-                                &cairo::RectangleInt {
-                                    x: 0,
-                                    y: 0,
-                                    width: size as i32,
-                                    height: size as i32,
-                                },
-                            ));
+                            let col = ((x - cells_size * 0.5) / cells_size) as u8;
+                            let row = ((y - cells_size * 0.5) / cells_size) as u8;
+                            let file = if chess_state.black_side == BlackSide::BlackBottom {
+                                7 - col
+                            } else {
+                                col
+                            };
+                            let rank = if chess_state.black_side == BlackSide::BlackBottom {
+                                row
+                            } else {
+                                7 - row
+                            };
+
+                            let piece_at_square = chess_state
+                                .board
+                                .piece_at_sq(SQ::from(rank * 8 + file))
+                                .character();
+
+                            if let Some(fen) = piece_at_square {
+                                dnd_state.origin_file = file;
+                                dnd_state.origin_rank = rank;
+
+                                dnd_state.moved_piece_fen = fen;
+                                dnd_state.dnd_active = true;
+
+                                widget.queue_draw_region(&cairo::Region::create_rectangle(
+                                    &cairo::RectangleInt {
+                                        x: 0,
+                                        y: 0,
+                                        width: size as i32,
+                                        height: size as i32,
+                                    },
+                                ));
+                            }
                         }
                     }
                 }
@@ -245,7 +277,7 @@ impl ChessBoard {
     }
 
     fn add_canvas_mouse_release_implementation(&self) {
-        let weak_canvas_state = Rc::downgrade(&self.model.canvas_state);
+        let weak_chess_state = Rc::downgrade(&self.model.chess_state);
         let weak_dnd_state = Rc::downgrade(&self.model.dnd_state);
 
         self.canvas
@@ -258,11 +290,11 @@ impl ChessBoard {
                     }
 
                     if dnd_active {
-                        if let Some(canvas_state) = weak_canvas_state.upgrade() {
-                            let canvas_state = (*canvas_state).borrow();
+                        if let Some(chess_state) = weak_chess_state.upgrade() {
+                            let chess_state = (*chess_state).borrow();
                             let (x, y) = event.get_position();
 
-                            let size = canvas_state.size;
+                            let size = chess_state.size;
                             let cells_size = size as f64 / 9_f64;
                             let mut dnd_state = dnd_state.borrow_mut();
                             dnd_state.dnd_active = false;
@@ -285,7 +317,7 @@ impl ChessBoard {
     }
 
     fn add_canvas_mouse_move_implementation(&self) {
-        let weak_canvas_state = Rc::downgrade(&self.model.canvas_state);
+        let weak_chess_state = Rc::downgrade(&self.model.chess_state);
         let weak_dnd_state = Rc::downgrade(&self.model.dnd_state);
 
         self.canvas
@@ -298,10 +330,10 @@ impl ChessBoard {
                     }
 
                     if dnd_active {
-                        if let Some(canvas_state) = weak_canvas_state.upgrade() {
-                            let canvas_state = (*canvas_state).borrow();
+                        if let Some(chess_state) = weak_chess_state.upgrade() {
+                            let chess_state = (*chess_state).borrow();
                             let (x, y) = event.get_position();
-                            let size = canvas_state.size;
+                            let size = chess_state.size;
                             let cells_size = size as f64 / 9_f64;
 
                             let mut dnd_state = dnd_state.borrow_mut();
