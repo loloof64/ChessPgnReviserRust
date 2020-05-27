@@ -114,7 +114,7 @@ impl ChessBoardPainter {
         self.draw_cells(context, chess_state);
         self.draw_coordinates(context, chess_state);
         self.draw_player_turn(context, chess_state);
-        self.draw_pieces(context, chess_state);
+        self.draw_pieces(context, chess_state, dnd_state);
         self.draw_cursor_piece(context, dnd_state);
     }
 
@@ -152,14 +152,14 @@ impl ChessBoardPainter {
         }
     }
 
-    fn draw_pieces(&self, context: &Context, chess_state: &ChessState) {
+    fn draw_pieces(&self, context: &Context, chess_state: &ChessState, dnd_state: &DndState) {
         let position = chess_state.board.fen();
         let position = position.as_str();
         let black_side = chess_state.black_side;
         let pieces_lines = self.get_pieces_values_from_fen(position);
 
         for (line_index, line) in pieces_lines.iter().enumerate() {
-            self.draw_pieces_line(context, line, line_index as u8, black_side);
+            self.draw_pieces_line(context, line, line_index as u8, black_side, dnd_state);
         }
     }
 
@@ -227,6 +227,7 @@ impl ChessBoardPainter {
         line: &str,
         line_index: u8,
         black_side: BlackSide,
+        dnd_state: &DndState,
     ) {
         let line_values = line.chars();
         let mut col_index = 0_u8;
@@ -237,10 +238,18 @@ impl ChessBoardPainter {
             let value_ascii = value as u8;
             let is_digit_value = value_ascii >= ascii_0 && value_ascii <= ascii_9;
 
+            let file = if black_side == BlackSide::BlackBottom { 7 - col_index } else { col_index };
+            let rank = if black_side == BlackSide::BlackBottom { line_index } else { 7 - line_index };
+
             if is_digit_value {
                 col_index += self.skip_holes(value_ascii);
             } else {
-                self.draw_single_piece(context, value, col_index, line_index, black_side);
+                let is_not_moved_piece_cell = !dnd_state.dnd_active 
+                || dnd_state.origin_file != file 
+                || dnd_state.origin_rank != rank;
+                if is_not_moved_piece_cell {
+                    self.draw_single_piece(context, value, col_index, line_index, black_side);
+                }
                 col_index += 1;
             }
         }
