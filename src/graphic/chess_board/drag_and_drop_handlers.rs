@@ -118,6 +118,9 @@ fn update_target_coordinates(
     let col = ((x - cells_size*0.5) / cells_size) as u8;
     let row = ((y - cells_size*0.5) / cells_size) as u8;
 
+    let col = cmp::max(cmp::min(col, 7), 0);
+    let row = cmp::max(cmp::min(row, 7), 0);
+
     dnd_state.target_file = if black_side == BlackSide::BlackBottom { 7-col } else { col };
     dnd_state.target_rank = if black_side == BlackSide::BlackBottom { row } else { 7-row };
 }
