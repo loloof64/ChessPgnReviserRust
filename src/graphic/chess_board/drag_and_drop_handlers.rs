@@ -4,6 +4,8 @@ use gtk::DrawingArea;
 use pleco::core::sq::SQ;
 use std::cell::RefCell;
 
+use std::cmp;
+
 use super::chess_board_widget::*;
 
 pub fn mouse_pressed_handler(

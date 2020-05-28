@@ -131,37 +131,13 @@ impl ChessBoardPainter {
     }
 
     fn draw_cells(&self, context: &Context, chess_state: &ChessState, dnd_state: &DndState) {
-        let (w_cells_red, w_cells_green, w_cells_blue) = chess_state.white_cells_color;
-        let (b_cells_red, b_cells_green, b_cells_blue) = chess_state.black_cells_color;
-        let (start_cell_red, start_cell_green, start_cell_blue) = chess_state.dnd_start_cell_color;
-        let (end_cell_red, end_cell_green, end_cell_blue) = chess_state.dnd_end_cell_color;
-        let (cross_cell_red, cross_cell_green, cross_cell_blue) = chess_state.dnd_cross_color;
-
         let cells_size = self.cells_size as f64;
 
         for row in 0..8 {
             for col in 0..8 {
-                let is_white_cell = (row + col) % 2 == 0;
-                if is_white_cell {
-                    context.set_source_rgb(w_cells_red, w_cells_green, w_cells_blue);
-                } else {
-                    context.set_source_rgb(b_cells_red, b_cells_green, b_cells_blue);
-                }
-
-                if dnd_state.dnd_active {
-                    if is_dnd_target_cell(col, row, chess_state, dnd_state) {
-                        context.set_source_rgb(end_cell_red, end_cell_green, end_cell_blue);
-                    } else if is_dnd_start_cell(col, row, chess_state, dnd_state) {
-                        context.set_source_rgb(start_cell_red, start_cell_green, start_cell_blue);
-                    } else if is_dnd_cross_cell(col, row, chess_state, dnd_state) {
-                        context.set_source_rgb(cross_cell_red, cross_cell_green, cross_cell_blue);
-                    }
-                }
-
-                let cell_x = cells_size * (0.5 + (col as f64));
-                let cell_y = cells_size * (0.5 + (row as f64));
-                context.rectangle(cell_x, cell_y, cells_size, cells_size);
-                context.fill();
+                setup_current_cell_color(context, col, row, chess_state);
+                setup_dnd_highlight_if_matches(context, col, row, chess_state, dnd_state);
+                fill_current_cell_to_setup(context, col, row, cells_size);
             }
         }
     }
@@ -449,4 +425,43 @@ fn is_dnd_cross_cell(col: i8, row: i8, chess_state: &ChessState, dnd_state: &Dnd
     } as u8;
 
     file == dnd_state.target_file || rank == dnd_state.target_rank
+}
+
+fn setup_current_cell_color(context: &Context, col: i8, row: i8, chess_state: &ChessState) {
+    let (w_cells_red, w_cells_green, w_cells_blue) = chess_state.white_cells_color;
+    let (b_cells_red, b_cells_green, b_cells_blue) = chess_state.black_cells_color;
+    let is_white_cell = (row + col) % 2 == 0;
+    if is_white_cell {
+        context.set_source_rgb(w_cells_red, w_cells_green, w_cells_blue);
+    } else {
+        context.set_source_rgb(b_cells_red, b_cells_green, b_cells_blue);
+    }
+}
+
+fn setup_dnd_highlight_if_matches(
+    context: &Context,
+    col: i8,
+    row: i8,
+    chess_state: &ChessState,
+    dnd_state: &DndState,
+) {
+    let (start_cell_red, start_cell_green, start_cell_blue) = chess_state.dnd_start_cell_color;
+    let (end_cell_red, end_cell_green, end_cell_blue) = chess_state.dnd_end_cell_color;
+    let (cross_cell_red, cross_cell_green, cross_cell_blue) = chess_state.dnd_cross_color;
+    if dnd_state.dnd_active {
+        if is_dnd_target_cell(col, row, chess_state, dnd_state) {
+            context.set_source_rgb(end_cell_red, end_cell_green, end_cell_blue);
+        } else if is_dnd_start_cell(col, row, chess_state, dnd_state) {
+            context.set_source_rgb(start_cell_red, start_cell_green, start_cell_blue);
+        } else if is_dnd_cross_cell(col, row, chess_state, dnd_state) {
+            context.set_source_rgb(cross_cell_red, cross_cell_green, cross_cell_blue);
+        }
+    }
+}
+
+fn fill_current_cell_to_setup(context: &Context, col: i8, row: i8, cells_size: f64) {
+    let cell_x = cells_size * (0.5 + (col as f64));
+    let cell_y = cells_size * (0.5 + (row as f64));
+    context.rectangle(cell_x, cell_y, cells_size, cells_size);
+    context.fill();
 }
