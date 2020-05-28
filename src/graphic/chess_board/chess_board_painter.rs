@@ -88,7 +88,7 @@ impl ChessPiecesImages {
         .unwrap_or(None)
     }
 
-    fn get_image(&self, fen: char) -> Result<ImageSurface, ChessPiecesError> {
+    fn get_image_for_fen(&self, fen: char) -> Result<ImageSurface, ChessPiecesError> {
         match self.images.get(&fen) {
             Some(image) => Ok((image).clone()),
             None => Err(ChessPiecesError::BadPieceFenReference { fen }),
@@ -273,7 +273,7 @@ impl ChessBoardPainter {
         self.draw_single_piece_image(
             context,
             self.pieces_images
-                .get_image(value)
+                .get_image_for_fen(value)
                 .expect(format!("could not get image for {}", value).as_str()),
             cells_size * (0.5 + col),
             cells_size * (0.5 + row),
