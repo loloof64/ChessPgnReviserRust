@@ -1,4 +1,4 @@
-use gdk::{EventButton, EventMask};
+use gdk::{EventButton, EventMask, EventMotion};
 use gtk::prelude::*;
 use gtk::{DrawingArea, Inhibit};
 use pleco::{core::sq::SQ, Board};
@@ -6,7 +6,7 @@ use relm::Widget;
 use relm_derive::{widget, Msg};
 
 use std::cell::RefCell;
-use std::rc::{Rc, Weak};
+use std::rc::Rc;
 
 use super::chess_board_painter::ChessBoardPainter;
 
@@ -302,33 +302,10 @@ impl ChessBoard {
         self.canvas
             .connect_motion_notify_event(move |widget, event| {
                 if let Some(dnd_state) = weak_dnd_state.upgrade() {
-                    let dnd_active;
-                    {
-                        let dnd_state = (*dnd_state).borrow();
-                        dnd_active = dnd_state.dnd_active;
-                    }
-
-                    if dnd_active {
-                        if let Some(chess_state) = weak_chess_state.upgrade() {
-                            let chess_state = (*chess_state).borrow();
-                            let (x, y) = event.get_position();
-                            let size = chess_state.size;
-                            let cells_size = size as f64 / 9_f64;
-
-                            let mut dnd_state = dnd_state.borrow_mut();
-                            dnd_state.dnd_active = true;
-                            dnd_state.cursor_x = x - cells_size * 0.5;
-                            dnd_state.cursor_y = y - cells_size * 0.5;
-
-                            widget.queue_draw_region(&cairo::Region::create_rectangle(
-                                &cairo::RectangleInt {
-                                    x: 0,
-                                    y: 0,
-                                    width: size as i32,
-                                    height: size as i32,
-                                },
-                            ));
-                        }
+                    if let Some(chess_state) = weak_chess_state.upgrade() {
+                        let dnd_state = &(*dnd_state);
+                        let chess_state = &(*chess_state);
+                        mouse_moved_handler(dnd_state, chess_state, widget, event);
                     }
                 }
                 Inhibit(false)
@@ -347,7 +324,6 @@ fn mouse_released_handler(
         let dnd_state = dnd_state.borrow();
         dnd_active = dnd_state.dnd_active;
     }
-    
     if dnd_active {
         let mut dnd_state = dnd_state.borrow_mut();
         let chess_state = chess_state.borrow();
@@ -356,6 +332,38 @@ fn mouse_released_handler(
         let size = chess_state.size;
         let cells_size = size as f64 / 9_f64;
         dnd_state.dnd_active = false;
+        dnd_state.cursor_x = x - cells_size * 0.5;
+        dnd_state.cursor_y = y - cells_size * 0.5;
+
+        widget.queue_draw_region(&cairo::Region::create_rectangle(&cairo::RectangleInt {
+            x: 0,
+            y: 0,
+            width: size as i32,
+            height: size as i32,
+        }));
+    }
+}
+
+fn mouse_moved_handler(
+    dnd_state: &RefCell<DndState>,
+    chess_state: &RefCell<ChessState>,
+    widget: &DrawingArea,
+    event: &EventMotion,
+) {
+    let dnd_active;
+    {
+        let dnd_state = (*dnd_state).borrow();
+        dnd_active = dnd_state.dnd_active;
+    }
+
+    if dnd_active {
+        let chess_state = (*chess_state).borrow();
+        let (x, y) = event.get_position();
+        let size = chess_state.size;
+        let cells_size = size as f64 / 9_f64;
+
+        let mut dnd_state = dnd_state.borrow_mut();
+        dnd_state.dnd_active = true;
         dnd_state.cursor_x = x - cells_size * 0.5;
         dnd_state.cursor_y = y - cells_size * 0.5;
 
