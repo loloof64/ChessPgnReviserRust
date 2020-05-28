@@ -47,7 +47,11 @@ pub fn mouse_released_handler(
         update_cursor_position(x, y, chess_state, dnd_state);
         update_target_coordinates(x, y, chess_state, dnd_state);
 
-        try_to_apply_move(x, y, chess_state, dnd_state);
+        let file = get_file(x, chess_state);
+        let rank = get_rank(y, chess_state);
+        if cell_in_bounds(file, rank) {
+            try_to_apply_move(x, y, chess_state, dnd_state);
+        }
 
         repaint_canvas(canvas, chess_state);
     }
@@ -115,14 +119,22 @@ fn update_target_coordinates(
     let cells_size = size as f64 / 9_f64;
     let black_side = chess_state.black_side;
 
-    let col = ((x - cells_size*0.5) / cells_size) as u8;
-    let row = ((y - cells_size*0.5) / cells_size) as u8;
+    let col = ((x - cells_size * 0.5) / cells_size) as u8;
+    let row = ((y - cells_size * 0.5) / cells_size) as u8;
 
     let col = cmp::max(cmp::min(col, 7), 0);
     let row = cmp::max(cmp::min(row, 7), 0);
 
-    dnd_state.target_file = if black_side == BlackSide::BlackBottom { 7-col } else { col };
-    dnd_state.target_rank = if black_side == BlackSide::BlackBottom { row } else { 7-row };
+    dnd_state.target_file = if black_side == BlackSide::BlackBottom {
+        7 - col
+    } else {
+        col
+    };
+    dnd_state.target_rank = if black_side == BlackSide::BlackBottom {
+        row
+    } else {
+        7 - row
+    };
 }
 
 fn set_dnd_active(value: char, origin_file: u8, origin_rank: u8, dnd_state: &RefCell<DndState>) {
