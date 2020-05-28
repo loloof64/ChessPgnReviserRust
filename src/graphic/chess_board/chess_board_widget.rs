@@ -278,13 +278,7 @@ fn mouse_pressed_handler(
             let rank = rank as u8;
 
             if let Some(fen) = piece_at_square(file, rank, chess_state) {
-                let mut dnd_state = dnd_state.borrow_mut();
-                dnd_state.origin_file = file;
-                dnd_state.origin_rank = rank;
-
-                dnd_state.moved_piece_fen = fen;
-                dnd_state.dnd_active = true;
-
+                set_dnd_active(fen, file, rank, dnd_state);
                 repaint_canvas(canvas, chess_state);
             }
         }
@@ -349,6 +343,15 @@ fn update_cursor_position(
 
     dnd_state.cursor_x = x - cells_size * 0.5;
     dnd_state.cursor_y = y - cells_size * 0.5;
+}
+
+fn set_dnd_active(value: char, origin_file: u8, origin_rank: u8, dnd_state: &RefCell<DndState>) {
+    let mut dnd_state = dnd_state.borrow_mut();
+    dnd_state.origin_file = origin_file;
+    dnd_state.origin_rank = origin_rank;
+
+    dnd_state.moved_piece_fen = value;
+    dnd_state.dnd_active = true;
 }
 
 fn set_dnd_inactive(dnd_state: &RefCell<DndState>) {
