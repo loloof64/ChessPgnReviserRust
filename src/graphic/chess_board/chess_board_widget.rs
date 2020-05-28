@@ -213,12 +213,12 @@ impl ChessBoard {
         let weak_dnd_state = Rc::downgrade(&self.model.dnd_state);
 
         self.canvas
-            .connect_button_press_event(move |widget, event| {
+            .connect_button_press_event(move |canvas, event| {
                 if let Some(dnd_state) = weak_dnd_state.upgrade() {
                     if let Some(chess_state) = weak_chess_state.upgrade() {
                         let dnd_state = &(*dnd_state);
                         let chess_state = &(*chess_state);
-                        mouse_pressed_handler(dnd_state, chess_state, widget, event);
+                        mouse_pressed_handler(dnd_state, chess_state, canvas, event);
                     }
                 }
                 Inhibit(false)
@@ -230,12 +230,12 @@ impl ChessBoard {
         let weak_dnd_state = Rc::downgrade(&self.model.dnd_state);
 
         self.canvas
-            .connect_button_release_event(move |widget, event| {
+            .connect_button_release_event(move |canvas, event| {
                 if let Some(dnd_state) = weak_dnd_state.upgrade() {
                     if let Some(chess_state) = weak_chess_state.upgrade() {
                         let dnd_state = &(*dnd_state);
                         let chess_state = &(*chess_state);
-                        mouse_released_handler(dnd_state, chess_state, widget, event);
+                        mouse_released_handler(dnd_state, chess_state, canvas, event);
                     }
                 }
                 Inhibit(false)
@@ -247,12 +247,12 @@ impl ChessBoard {
         let weak_dnd_state = Rc::downgrade(&self.model.dnd_state);
 
         self.canvas
-            .connect_motion_notify_event(move |widget, event| {
+            .connect_motion_notify_event(move |canvas, event| {
                 if let Some(dnd_state) = weak_dnd_state.upgrade() {
                     if let Some(chess_state) = weak_chess_state.upgrade() {
                         let dnd_state = &(*dnd_state);
                         let chess_state = &(*chess_state);
-                        mouse_moved_handler(dnd_state, chess_state, widget, event);
+                        mouse_moved_handler(dnd_state, chess_state, canvas, event);
                     }
                 }
                 Inhibit(false)
@@ -263,7 +263,7 @@ impl ChessBoard {
 fn mouse_pressed_handler(
     dnd_state: &RefCell<DndState>,
     chess_state: &RefCell<ChessState>,
-    widget: &DrawingArea,
+    canvas: &DrawingArea,
     event: &EventButton,
 ) {
     if ! get_dnd_active_state(dnd_state) {
@@ -306,12 +306,7 @@ fn mouse_pressed_handler(
                 dnd_state.moved_piece_fen = fen;
                 dnd_state.dnd_active = true;
 
-                widget.queue_draw_region(&cairo::Region::create_rectangle(&cairo::RectangleInt {
-                    x: 0,
-                    y: 0,
-                    width: size as i32,
-                    height: size as i32,
-                }));
+                repaint_canvas(canvas, size as i32);
             }
         }
     }
@@ -320,7 +315,7 @@ fn mouse_pressed_handler(
 fn mouse_released_handler(
     dnd_state: &RefCell<DndState>,
     chess_state: &RefCell<ChessState>,
-    widget: &DrawingArea,
+    canvas: &DrawingArea,
     event: &EventButton,
 ) {
     if get_dnd_active_state(dnd_state) {
@@ -334,19 +329,14 @@ fn mouse_released_handler(
         dnd_state.cursor_x = x - cells_size * 0.5;
         dnd_state.cursor_y = y - cells_size * 0.5;
 
-        widget.queue_draw_region(&cairo::Region::create_rectangle(&cairo::RectangleInt {
-            x: 0,
-            y: 0,
-            width: size as i32,
-            height: size as i32,
-        }));
+        repaint_canvas(canvas, size as i32);
     }
 }
 
 fn mouse_moved_handler(
     dnd_state: &RefCell<DndState>,
     chess_state: &RefCell<ChessState>,
-    widget: &DrawingArea,
+    canvas: &DrawingArea,
     event: &EventMotion,
 ) {
     if get_dnd_active_state(dnd_state) {
@@ -360,16 +350,23 @@ fn mouse_moved_handler(
         dnd_state.cursor_x = x - cells_size * 0.5;
         dnd_state.cursor_y = y - cells_size * 0.5;
 
-        widget.queue_draw_region(&cairo::Region::create_rectangle(&cairo::RectangleInt {
-            x: 0,
-            y: 0,
-            width: size as i32,
-            height: size as i32,
-        }));
+        repaint_canvas(canvas, size as i32);
     }
 }
 
 fn get_dnd_active_state(dnd_state: &RefCell<DndState>) -> bool {
     let dnd_state = (*dnd_state).borrow();
     dnd_state.dnd_active
+}
+
+fn repaint_canvas(
+    canvas: &DrawingArea,
+    canvas_size: i32,
+) {
+    canvas.queue_draw_region(&cairo::Region::create_rectangle(&cairo::RectangleInt {
+        x: 0,
+        y: 0,
+        width: canvas_size,
+        height: canvas_size,
+    }));
 }
