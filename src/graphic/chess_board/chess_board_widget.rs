@@ -266,12 +266,7 @@ fn mouse_pressed_handler(
     widget: &DrawingArea,
     event: &EventButton,
 ) {
-    let dnd_not_started;
-    {
-        let dnd_state = (*dnd_state).borrow();
-        dnd_not_started = !dnd_state.dnd_active;
-    }
-    if dnd_not_started {
+    if ! get_dnd_active_state(dnd_state) {
         let chess_state = (*chess_state).borrow();
         let (x, y) = event.get_position();
 
@@ -328,12 +323,7 @@ fn mouse_released_handler(
     widget: &DrawingArea,
     event: &EventButton,
 ) {
-    let dnd_active;
-    {
-        let dnd_state = dnd_state.borrow();
-        dnd_active = dnd_state.dnd_active;
-    }
-    if dnd_active {
+    if get_dnd_active_state(dnd_state) {
         let mut dnd_state = dnd_state.borrow_mut();
         let chess_state = chess_state.borrow();
 
@@ -359,13 +349,7 @@ fn mouse_moved_handler(
     widget: &DrawingArea,
     event: &EventMotion,
 ) {
-    let dnd_active;
-    {
-        let dnd_state = (*dnd_state).borrow();
-        dnd_active = dnd_state.dnd_active;
-    }
-
-    if dnd_active {
+    if get_dnd_active_state(dnd_state) {
         let chess_state = (*chess_state).borrow();
         let (x, y) = event.get_position();
         let size = chess_state.size;
@@ -383,4 +367,9 @@ fn mouse_moved_handler(
             height: size as i32,
         }));
     }
+}
+
+fn get_dnd_active_state(dnd_state: &RefCell<DndState>) -> bool {
+    let dnd_state = (*dnd_state).borrow();
+    dnd_state.dnd_active
 }
