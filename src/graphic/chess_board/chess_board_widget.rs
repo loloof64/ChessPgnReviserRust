@@ -266,25 +266,27 @@ fn mouse_pressed_handler(
     canvas: &DrawingArea,
     event: &EventButton,
 ) {
-    if ! get_dnd_active_state(dnd_state) {
-        let chess_state = (*chess_state).borrow();
+    if !get_dnd_active_state(dnd_state) {
         let (x, y) = event.get_position();
 
-        let size = chess_state.size;
-        let cells_size = size as f64 / 9_f64;
-        let mut dnd_state = dnd_state.borrow_mut();
+        update_cursor_position(x, y, chess_state, dnd_state);
 
-        dnd_state.cursor_x = x - cells_size * 0.5;
-        dnd_state.cursor_y = y - cells_size * 0.5;
+        let cells_size;
+        let black_side;
+        {
+            let chess_state = chess_state.borrow();
+            cells_size = chess_state.size as f64 / 9_f64;
+            black_side = chess_state.black_side;
+        }
 
         let col = ((x - cells_size * 0.5) / cells_size) as i8;
         let row = ((y - cells_size * 0.5) / cells_size) as i8;
-        let file = if chess_state.black_side == BlackSide::BlackBottom {
+        let file = if black_side == BlackSide::BlackBottom {
             7 - col
         } else {
             col
         };
-        let rank = if chess_state.black_side == BlackSide::BlackBottom {
+        let rank = if black_side == BlackSide::BlackBottom {
             row
         } else {
             7 - row
@@ -294,19 +296,24 @@ fn mouse_pressed_handler(
         if cell_in_bounds {
             let file = file as u8;
             let rank = rank as u8;
-            let piece_at_square = chess_state
-                .board
-                .piece_at_sq(SQ::from(rank * 8 + file))
-                .character();
+            let piece_at_square;
+            {
+                let chess_state = chess_state.borrow();
+                piece_at_square = chess_state
+                    .board
+                    .piece_at_sq(SQ::from(rank * 8 + file))
+                    .character();
+            }
 
             if let Some(fen) = piece_at_square {
+                let mut dnd_state = dnd_state.borrow_mut();
                 dnd_state.origin_file = file;
                 dnd_state.origin_rank = rank;
 
                 dnd_state.moved_piece_fen = fen;
                 dnd_state.dnd_active = true;
 
-                repaint_canvas(canvas, size as i32);
+                repaint_canvas(canvas, chess_state);
             }
         }
     }
@@ -319,17 +326,14 @@ fn mouse_released_handler(
     event: &EventButton,
 ) {
     if get_dnd_active_state(dnd_state) {
-        let mut dnd_state = dnd_state.borrow_mut();
-        let chess_state = chess_state.borrow();
-
         let (x, y) = event.get_position();
-        let size = chess_state.size;
-        let cells_size = size as f64 / 9_f64;
-        dnd_state.dnd_active = false;
-        dnd_state.cursor_x = x - cells_size * 0.5;
-        dnd_state.cursor_y = y - cells_size * 0.5;
+        {
+            let mut dnd_state = dnd_state.borrow_mut();
+            dnd_state.dnd_active = false;
+        }
 
-        repaint_canvas(canvas, size as i32);
+        update_cursor_position(x, y, chess_state, dnd_state);
+        repaint_canvas(canvas, chess_state);
     }
 }
 
@@ -340,17 +344,9 @@ fn mouse_moved_handler(
     event: &EventMotion,
 ) {
     if get_dnd_active_state(dnd_state) {
-        let chess_state = (*chess_state).borrow();
         let (x, y) = event.get_position();
-        let size = chess_state.size;
-        let cells_size = size as f64 / 9_f64;
-
-        let mut dnd_state = dnd_state.borrow_mut();
-        dnd_state.dnd_active = true;
-        dnd_state.cursor_x = x - cells_size * 0.5;
-        dnd_state.cursor_y = y - cells_size * 0.5;
-
-        repaint_canvas(canvas, size as i32);
+        update_cursor_position(x, y, chess_state, dnd_state);
+        repaint_canvas(canvas, chess_state);
     }
 }
 
@@ -359,14 +355,30 @@ fn get_dnd_active_state(dnd_state: &RefCell<DndState>) -> bool {
     dnd_state.dnd_active
 }
 
-fn repaint_canvas(
-    canvas: &DrawingArea,
-    canvas_size: i32,
-) {
+fn repaint_canvas(canvas: &DrawingArea, chess_state: &RefCell<ChessState>) {
+    let chess_state = chess_state.borrow();
+    let canvas_size = chess_state.size as i32;
+
     canvas.queue_draw_region(&cairo::Region::create_rectangle(&cairo::RectangleInt {
         x: 0,
         y: 0,
         width: canvas_size,
         height: canvas_size,
     }));
+}
+
+fn update_cursor_position(
+    x: f64,
+    y: f64,
+    chess_state: &RefCell<ChessState>,
+    dnd_state: &RefCell<DndState>,
+) {
+    let chess_state = chess_state.borrow();
+    let mut dnd_state = dnd_state.borrow_mut();
+
+    let size = chess_state.size;
+    let cells_size = size as f64 / 9_f64;
+
+    dnd_state.cursor_x = x - cells_size * 0.5;
+    dnd_state.cursor_y = y - cells_size * 0.5;
 }
