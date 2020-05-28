@@ -277,16 +277,7 @@ fn mouse_pressed_handler(
             let file = file as u8;
             let rank = rank as u8;
 
-            let piece_at_square;
-            {
-                let chess_state = chess_state.borrow();
-                piece_at_square = chess_state
-                    .board
-                    .piece_at_sq(SQ::from(rank * 8 + file))
-                    .character();
-            }
-
-            if let Some(fen) = piece_at_square {
+            if let Some(fen) = piece_at_square(file, rank, chess_state) {
                 let mut dnd_state = dnd_state.borrow_mut();
                 dnd_state.origin_file = file;
                 dnd_state.origin_rank = rank;
@@ -395,4 +386,12 @@ fn get_rank(y: f64, chess_state: &RefCell<ChessState>) -> i8 {
 
 fn cell_in_bounds(file: i8, rank: i8) -> bool {
     file >= 0 && file <= 7 && rank >= 0 && rank <= 7
+}
+
+fn piece_at_square(file: u8, rank: u8, chess_state: &RefCell<ChessState>) -> Option<char> {
+    let chess_state = chess_state.borrow();
+    chess_state
+        .board
+        .piece_at_sq(SQ::from(rank * 8 + file))
+        .character()
 }
