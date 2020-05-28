@@ -33,9 +33,13 @@ impl ChessPiecesImages {
             let image_to_render =
                 ChessPiecesImages::image_surface_from_svg_definition(&svg_content, &options);
 
-            if let Some(image) = image_to_render {
-                self.images.insert(fen, image);
-            }
+            self.insert_image_if_defined(fen, image_to_render);
+        }
+    }
+
+    fn insert_image_if_defined(&mut self, fen: char, image: Option<ImageSurface>) {
+        if let Some(image) = image {
+            self.images.insert(fen, image);
         }
     }
 
@@ -231,15 +235,15 @@ impl ChessBoardPainter {
             let value_ascii = value as u8;
             let is_digit_value = value_ascii >= ascii_0 && value_ascii <= ascii_9;
 
-            let file =  col_index;
+            let file = col_index;
             let rank = 7 - line_index;
 
             if is_digit_value {
                 col_index += self.skip_holes(value_ascii);
             } else {
-                let is_not_moved_piece_cell = !dnd_state.dnd_active 
-                || dnd_state.origin_file != file 
-                || dnd_state.origin_rank != rank;
+                let is_not_moved_piece_cell = !dnd_state.dnd_active
+                    || dnd_state.origin_file != file
+                    || dnd_state.origin_rank != rank;
                 if is_not_moved_piece_cell {
                     self.draw_single_piece(context, value, col_index, line_index, black_side);
                 }
