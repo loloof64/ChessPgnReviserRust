@@ -235,27 +235,40 @@ impl ChessBoardPainter {
             let value_ascii = value as u8;
             let is_digit_value = value_ascii >= ascii_0 && value_ascii <= ascii_9;
 
-            let file = col_index;
-            let rank = 7 - line_index;
-
             if is_digit_value {
-                col_index += self.skip_holes(value_ascii);
+                col_index += self.skip_and_count_holes(value_ascii);
             } else {
-                let is_not_moved_piece_cell = !dnd_state.dnd_active
-                    || dnd_state.origin_file != file
-                    || dnd_state.origin_rank != rank;
-                if is_not_moved_piece_cell {
-                    self.draw_single_piece(context, value, col_index, line_index, black_side);
-                }
+                self.draw_single_piece_if_not_moved_one(
+                    context, value, col_index, line_index, black_side, dnd_state,
+                );
                 col_index += 1;
             }
         }
     }
 
-    fn skip_holes(&self, value_ascii: u8) -> u8 {
+    fn skip_and_count_holes(&self, value_ascii: u8) -> u8 {
         let ascii_0 = 48;
         let holes_count = value_ascii - ascii_0;
         holes_count
+    }
+
+    fn draw_single_piece_if_not_moved_one(
+        &self,
+        context: &Context,
+        value: char,
+        col_index: u8,
+        line_index: u8,
+        black_side: BlackSide,
+        dnd_state: &DndState,
+    ) {
+        let file = col_index;
+        let rank = 7 - line_index;
+        let is_not_moved_piece_cell =
+            !dnd_state.dnd_active || dnd_state.origin_file != file || dnd_state.origin_rank != rank;
+
+        if is_not_moved_piece_cell {
+            self.draw_single_piece(context, value, col_index, line_index, black_side);
+        }
     }
 
     fn draw_single_piece(
@@ -268,8 +281,8 @@ impl ChessBoardPainter {
     ) {
         let col = self.get_col(col_index, black_side) as f64;
         let row = self.get_row(line_index, black_side) as f64;
-
         let cells_size = self.cells_size as f64;
+
         self.draw_single_piece_image(
             context,
             self.pieces_images
