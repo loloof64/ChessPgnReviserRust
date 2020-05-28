@@ -326,12 +326,9 @@ fn mouse_released_handler(
     event: &EventButton,
 ) {
     if get_dnd_active_state(dnd_state) {
+        set_dnd_inactive(dnd_state);
+        
         let (x, y) = event.get_position();
-        {
-            let mut dnd_state = dnd_state.borrow_mut();
-            dnd_state.dnd_active = false;
-        }
-
         update_cursor_position(x, y, chess_state, dnd_state);
         repaint_canvas(canvas, chess_state);
     }
@@ -381,4 +378,9 @@ fn update_cursor_position(
 
     dnd_state.cursor_x = x - cells_size * 0.5;
     dnd_state.cursor_y = y - cells_size * 0.5;
+}
+
+fn set_dnd_inactive(dnd_state: &RefCell<DndState>) {
+    let mut dnd_state = dnd_state.borrow_mut();
+    dnd_state.dnd_active = false;
 }
