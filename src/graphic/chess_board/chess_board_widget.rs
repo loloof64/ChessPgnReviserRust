@@ -268,34 +268,15 @@ fn mouse_pressed_handler(
 ) {
     if !get_dnd_active_state(dnd_state) {
         let (x, y) = event.get_position();
-
         update_cursor_position(x, y, chess_state, dnd_state);
 
-        let cells_size;
-        let black_side;
-        {
-            let chess_state = chess_state.borrow();
-            cells_size = chess_state.size as f64 / 9_f64;
-            black_side = chess_state.black_side;
-        }
+        let file = get_file(x, chess_state);
+        let rank = get_rank(y, chess_state);
 
-        let col = ((x - cells_size * 0.5) / cells_size) as i8;
-        let row = ((y - cells_size * 0.5) / cells_size) as i8;
-        let file = if black_side == BlackSide::BlackBottom {
-            7 - col
-        } else {
-            col
-        };
-        let rank = if black_side == BlackSide::BlackBottom {
-            row
-        } else {
-            7 - row
-        };
-
-        let cell_in_bounds = file >= 0 && file <= 7 && rank >= 0 && rank <= 7;
-        if cell_in_bounds {
+        if cell_in_bounds(file, rank) {
             let file = file as u8;
             let rank = rank as u8;
+
             let piece_at_square;
             {
                 let chess_state = chess_state.borrow();
@@ -327,7 +308,6 @@ fn mouse_released_handler(
 ) {
     if get_dnd_active_state(dnd_state) {
         set_dnd_inactive(dnd_state);
-        
         let (x, y) = event.get_position();
         update_cursor_position(x, y, chess_state, dnd_state);
         repaint_canvas(canvas, chess_state);
@@ -383,4 +363,36 @@ fn update_cursor_position(
 fn set_dnd_inactive(dnd_state: &RefCell<DndState>) {
     let mut dnd_state = dnd_state.borrow_mut();
     dnd_state.dnd_active = false;
+}
+
+fn get_file(x: f64, chess_state: &RefCell<ChessState>) -> i8 {
+    let chess_state = chess_state.borrow();
+    let cells_size = chess_state.size as f64 / 9_f64;
+    let black_side = chess_state.black_side;
+
+    let col = ((x - cells_size * 0.5) / cells_size) as i8;
+
+    if black_side == BlackSide::BlackBottom {
+        7 - col
+    } else {
+        col
+    }
+}
+
+fn get_rank(y: f64, chess_state: &RefCell<ChessState>) -> i8 {
+    let chess_state = chess_state.borrow();
+    let cells_size = chess_state.size as f64 / 9_f64;
+    let black_side = chess_state.black_side;
+
+    let row = ((y - cells_size * 0.5) / cells_size) as i8;
+
+    if black_side == BlackSide::BlackBottom {
+        row
+    } else {
+        7 - row
+    }
+}
+
+fn cell_in_bounds(file: i8, rank: i8) -> bool {
+    file >= 0 && file <= 7 && rank >= 0 && rank <= 7
 }
