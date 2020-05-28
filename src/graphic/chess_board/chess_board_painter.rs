@@ -231,8 +231,8 @@ impl ChessBoardPainter {
             let value_ascii = value as u8;
             let is_digit_value = value_ascii >= ascii_0 && value_ascii <= ascii_9;
 
-            let file = if black_side == BlackSide::BlackBottom { 7 - col_index } else { col_index };
-            let rank = if black_side == BlackSide::BlackBottom { line_index } else { 7 - line_index };
+            let file =  col_index;
+            let rank = 7 - line_index;
 
             if is_digit_value {
                 col_index += self.skip_holes(value_ascii);
