@@ -200,14 +200,7 @@ impl ChessBoardPainter {
     fn draw_cursor_piece(&self, context: &Context, dnd_state: &DndState) {
         if dnd_state.dnd_active {
             let image = self.get_image_cursor_for_fen(dnd_state.moved_piece_fen);
-            let origin = 0f64;
-
-            context.save();
-            context.translate(dnd_state.cursor_x, dnd_state.cursor_y);
-            context.set_source_surface(&image, origin, origin);
-            context.paint();
-            context.fill();
-            context.restore();
+            self.draw_single_piece_image(context, image, dnd_state.cursor_x, dnd_state.cursor_y);
         }
     }
 
