@@ -41,6 +41,26 @@ pub fn mouse_released_handler(
         set_dnd_inactive(dnd_state);
         let (x, y) = event.get_position();
         update_cursor_position(x, y, chess_state, dnd_state);
+
+        let dnd_state = dnd_state.borrow();
+
+        let target_file = get_file(x, chess_state);
+        let target_rank = get_rank(y, chess_state);
+
+        let origin_cell_uci = cell_to_uci(dnd_state.origin_file, dnd_state.origin_rank);
+        let target_cell_uci = cell_to_uci(target_file as u8, target_rank as u8);
+
+        let move_uci = format!("{}{}", 
+            origin_cell_uci,
+            target_cell_uci,
+        );
+        let move_uci = move_uci.as_str();
+
+        {
+            let mut chess_state = chess_state.borrow_mut();
+            let _ =  chess_state.board.apply_uci_move(move_uci);
+        }
+
         repaint_canvas(canvas, chess_state);
     }
 }
@@ -143,4 +163,14 @@ fn piece_at_square(file: u8, rank: u8, chess_state: &RefCell<ChessState>) -> Opt
         .board
         .piece_at_sq(SQ::from(rank * 8 + file))
         .character()
+}
+
+fn cell_to_uci<'a>(file: u8, rank: u8) -> String {
+    let ascii_lowercase_a = 97;
+    let file_ascii = ascii_lowercase_a + file;
+
+    let ascii_1 = 49;
+    let rank_ascii = ascii_1 + rank;
+
+    format!("{}{}", file_ascii as char, rank_ascii as char)
 }
