@@ -18,6 +18,7 @@ pub fn mouse_pressed_handler(
         let rank = get_rank(y, chess_state);
         if cell_in_bounds(file, rank) {
             update_cursor_position(x, y, chess_state, dnd_state);
+            update_target_coordinates(x, y, chess_state, dnd_state);
 
             let file = file as u8;
             let rank = rank as u8;
@@ -38,9 +39,12 @@ pub fn mouse_released_handler(
 ) {
     if get_dnd_active_state(dnd_state) {
         set_dnd_inactive(dnd_state);
-        
+
         let (x, y) = event.get_position();
+
         update_cursor_position(x, y, chess_state, dnd_state);
+        update_target_coordinates(x, y, chess_state, dnd_state);
+
         try_to_apply_move(x, y, chess_state, dnd_state);
 
         repaint_canvas(canvas, chess_state);
@@ -55,7 +59,10 @@ pub fn mouse_moved_handler(
 ) {
     if get_dnd_active_state(dnd_state) {
         let (x, y) = event.get_position();
+
         update_cursor_position(x, y, chess_state, dnd_state);
+        update_target_coordinates(x, y, chess_state, dnd_state);
+
         repaint_canvas(canvas, chess_state);
     }
 }
@@ -91,6 +98,26 @@ fn update_cursor_position(
 
     dnd_state.cursor_x = x - cells_size * 0.5;
     dnd_state.cursor_y = y - cells_size * 0.5;
+}
+
+fn update_target_coordinates(
+    x: f64,
+    y: f64,
+    chess_state: &RefCell<ChessState>,
+    dnd_state: &RefCell<DndState>,
+) {
+    let chess_state = chess_state.borrow();
+    let mut dnd_state = dnd_state.borrow_mut();
+
+    let size = chess_state.size;
+    let cells_size = size as f64 / 9_f64;
+    let black_side = chess_state.black_side;
+
+    let col = ((x - cells_size*0.5) / cells_size) as u8;
+    let row = ((y - cells_size*0.5) / cells_size) as u8;
+
+    dnd_state.target_file = if black_side == BlackSide::BlackBottom { 7-col } else { col };
+    dnd_state.target_rank = if black_side == BlackSide::BlackBottom { row } else { 7-row };
 }
 
 fn set_dnd_active(value: char, origin_file: u8, origin_rank: u8, dnd_state: &RefCell<DndState>) {

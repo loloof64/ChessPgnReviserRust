@@ -115,7 +115,7 @@ impl ChessBoardPainter {
 
     pub fn paint(&self, context: &Context, chess_state: &ChessState, dnd_state: &DndState) {
         self.draw_background(context, chess_state);
-        self.draw_cells(context, chess_state);
+        self.draw_cells(context, chess_state, dnd_state);
         self.draw_coordinates(context, chess_state);
         self.draw_player_turn(context, chess_state);
         self.draw_pieces(context, chess_state, dnd_state);
@@ -130,12 +130,12 @@ impl ChessBoardPainter {
         context.paint();
     }
 
-    fn draw_cells(&self, context: &Context, chess_state: &ChessState) {
-        let white_cells_color = chess_state.white_cells_color;
-        let black_cells_color = chess_state.black_cells_color;
-
-        let (w_cells_red, w_cells_green, w_cells_blue) = white_cells_color;
-        let (b_cells_red, b_cells_green, b_cells_blue) = black_cells_color;
+    fn draw_cells(&self, context: &Context, chess_state: &ChessState, dnd_state: &DndState) {
+        let (w_cells_red, w_cells_green, w_cells_blue) = chess_state.white_cells_color;
+        let (b_cells_red, b_cells_green, b_cells_blue) = chess_state.black_cells_color;
+        let (start_cell_red, start_cell_green, start_cell_blue) = chess_state.dnd_start_cell_color;
+        let (end_cell_red, end_cell_green, end_cell_blue) = chess_state.dnd_end_cell_color;
+        let (cross_cell_red, cross_cell_green, cross_cell_blue) = chess_state.dnd_cross_color;
 
         let cells_size = self.cells_size as f64;
 
@@ -146,6 +146,16 @@ impl ChessBoardPainter {
                     context.set_source_rgb(w_cells_red, w_cells_green, w_cells_blue);
                 } else {
                     context.set_source_rgb(b_cells_red, b_cells_green, b_cells_blue);
+                }
+
+                if dnd_state.dnd_active {
+                    if is_dnd_target_cell(col, row, chess_state, dnd_state) {
+                        context.set_source_rgb(end_cell_red, end_cell_green, end_cell_blue);
+                    } else if is_dnd_start_cell(col, row, chess_state, dnd_state) {
+                        context.set_source_rgb(start_cell_red, start_cell_green, start_cell_blue);
+                    } else if is_dnd_cross_cell(col, row, chess_state, dnd_state) {
+                        context.set_source_rgb(cross_cell_red, cross_cell_green, cross_cell_blue);
+                    }
                 }
 
                 let cell_x = cells_size * (0.5 + (col as f64));
@@ -394,4 +404,49 @@ impl ChessBoardPainter {
         context.fill();
         context.restore();
     }
+}
+
+fn is_dnd_start_cell(col: i8, row: i8, chess_state: &ChessState, dnd_state: &DndState) -> bool {
+    let file = if chess_state.black_side == BlackSide::BlackBottom {
+        7 - col
+    } else {
+        col
+    } as u8;
+    let rank = if chess_state.black_side == BlackSide::BlackBottom {
+        row
+    } else {
+        7 - row
+    } as u8;
+
+    file == dnd_state.origin_file && rank == dnd_state.origin_rank
+}
+
+fn is_dnd_target_cell(col: i8, row: i8, chess_state: &ChessState, dnd_state: &DndState) -> bool {
+    let file = if chess_state.black_side == BlackSide::BlackBottom {
+        7 - col
+    } else {
+        col
+    } as u8;
+    let rank = if chess_state.black_side == BlackSide::BlackBottom {
+        row
+    } else {
+        7 - row
+    } as u8;
+
+    file == dnd_state.target_file && rank == dnd_state.target_rank
+}
+
+fn is_dnd_cross_cell(col: i8, row: i8, chess_state: &ChessState, dnd_state: &DndState) -> bool {
+    let file = if chess_state.black_side == BlackSide::BlackBottom {
+        7 - col
+    } else {
+        col
+    } as u8;
+    let rank = if chess_state.black_side == BlackSide::BlackBottom {
+        row
+    } else {
+        7 - row
+    } as u8;
+
+    file == dnd_state.target_file || rank == dnd_state.target_rank
 }

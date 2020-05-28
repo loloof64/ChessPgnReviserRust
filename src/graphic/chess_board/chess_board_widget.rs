@@ -24,6 +24,9 @@ pub struct ChessState {
     pub white_cells_color: (f64, f64, f64),
     pub black_cells_color: (f64, f64, f64),
     pub coordinates_color: (f64, f64, f64),
+    pub dnd_start_cell_color: (f64, f64, f64),
+    pub dnd_end_cell_color: (f64, f64, f64),
+    pub dnd_cross_color: (f64, f64, f64),
     pub board: Board,
     pub black_side: BlackSide,
 }
@@ -35,6 +38,8 @@ pub struct DndState {
     pub cursor_y: f64,
     pub origin_file: u8,
     pub origin_rank: u8,
+    pub target_file: u8,
+    pub target_rank: u8,
     pub moved_piece_fen: char,
 }
 
@@ -50,6 +55,9 @@ pub struct ChessStateBuilder {
     white_cells_color: (f64, f64, f64),
     black_cells_color: (f64, f64, f64),
     coordinates_color: (f64, f64, f64),
+    dnd_start_cell_color: (f64, f64, f64),
+    dnd_end_cell_color: (f64, f64, f64),
+    dnd_cross_color: (f64, f64, f64),
     black_side: BlackSide,
 }
 
@@ -62,6 +70,9 @@ impl ChessStateBuilder {
             white_cells_color: (1.0, 0.85, 0.6),
             black_cells_color: (0.85, 0.55, 0.25),
             coordinates_color: (1.0, 0.78, 0.0),
+            dnd_start_cell_color: (0.92, 0.12, 0.22),
+            dnd_end_cell_color: (0.34, 0.82, 0.14),
+            dnd_cross_color: (0.70, 0.18, 0.90),
             black_side: BlackSide::BlackTop,
         }
     }
@@ -73,6 +84,9 @@ impl ChessStateBuilder {
             white_cells_color: self.white_cells_color,
             black_cells_color: self.black_cells_color,
             coordinates_color: self.coordinates_color,
+            dnd_start_cell_color: self.dnd_start_cell_color,
+            dnd_end_cell_color: self.dnd_end_cell_color,
+            dnd_cross_color: self.dnd_cross_color,
             black_side: self.black_side,
             board: Board::start_pos(),
         }
@@ -100,6 +114,18 @@ impl ChessStateBuilder {
 
     fn set_board_orientation(&mut self, side: BlackSide) {
         self.black_side = side;
+    }
+
+    fn set_dnd_start_cell_color(&mut self, start_cell_color: (f64, f64, f64)) {
+        self.dnd_start_cell_color = start_cell_color;
+    }
+
+    fn set_dnd_end_cell_color(&mut self, end_cell_color: (f64, f64, f64)) {
+        self.dnd_end_cell_color = end_cell_color;
+    }
+
+    fn set_dnd_cross_color(&mut self, cross_color: (f64, f64, f64)) {
+        self.dnd_cross_color = cross_color;
     }
 }
 
