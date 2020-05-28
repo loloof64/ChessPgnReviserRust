@@ -16,7 +16,6 @@ pub fn mouse_pressed_handler(
         let (x, y) = event.get_position();
         let file = get_file(x, chess_state);
         let rank = get_rank(y, chess_state);
-        
         if cell_in_bounds(file, rank) {
             update_cursor_position(x, y, chess_state, dnd_state);
 
@@ -39,27 +38,10 @@ pub fn mouse_released_handler(
 ) {
     if get_dnd_active_state(dnd_state) {
         set_dnd_inactive(dnd_state);
+        
         let (x, y) = event.get_position();
         update_cursor_position(x, y, chess_state, dnd_state);
-
-        let dnd_state = dnd_state.borrow();
-
-        let target_file = get_file(x, chess_state);
-        let target_rank = get_rank(y, chess_state);
-
-        let origin_cell_uci = cell_to_uci(dnd_state.origin_file, dnd_state.origin_rank);
-        let target_cell_uci = cell_to_uci(target_file as u8, target_rank as u8);
-
-        let move_uci = format!("{}{}", 
-            origin_cell_uci,
-            target_cell_uci,
-        );
-        let move_uci = move_uci.as_str();
-
-        {
-            let mut chess_state = chess_state.borrow_mut();
-            let _ =  chess_state.board.apply_uci_move(move_uci);
-        }
+        try_to_apply_move(x, y, chess_state, dnd_state);
 
         repaint_canvas(canvas, chess_state);
     }
@@ -173,4 +155,25 @@ fn cell_to_uci<'a>(file: u8, rank: u8) -> String {
     let rank_ascii = ascii_1 + rank;
 
     format!("{}{}", file_ascii as char, rank_ascii as char)
+}
+
+fn try_to_apply_move(
+    x: f64,
+    y: f64,
+    chess_state: &RefCell<ChessState>,
+    dnd_state: &RefCell<DndState>,
+) {
+    let dnd_state = dnd_state.borrow();
+
+    let target_file = get_file(x, chess_state);
+    let target_rank = get_rank(y, chess_state);
+
+    let origin_cell_uci = cell_to_uci(dnd_state.origin_file, dnd_state.origin_rank);
+    let target_cell_uci = cell_to_uci(target_file as u8, target_rank as u8);
+
+    let move_uci = format!("{}{}", origin_cell_uci, target_cell_uci,);
+    let move_uci = move_uci.as_str();
+
+    let mut chess_state = chess_state.borrow_mut();
+    let _ = chess_state.board.apply_uci_move(move_uci);
 }
