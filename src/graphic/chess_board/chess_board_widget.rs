@@ -268,12 +268,12 @@ fn mouse_pressed_handler(
 ) {
     if !get_dnd_active_state(dnd_state) {
         let (x, y) = event.get_position();
-        update_cursor_position(x, y, chess_state, dnd_state);
-
         let file = get_file(x, chess_state);
         let rank = get_rank(y, chess_state);
-
+        
         if cell_in_bounds(file, rank) {
+            update_cursor_position(x, y, chess_state, dnd_state);
+
             let file = file as u8;
             let rank = rank as u8;
 
