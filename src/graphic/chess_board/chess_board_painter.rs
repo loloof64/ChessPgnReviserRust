@@ -234,35 +234,35 @@ impl ChessBoardPainter {
     fn draw_arrow(
         &self,
         context: &Context,
-        x1: f64,
-        y1: f64,
-        x2: f64,
-        y2: f64,
+        start_x: f64,
+        start_y: f64,
+        head_x: f64,
+        head_y: f64,
         arrow_length: f64,
         arrow_width: f64,
     ) {
         // Inspired by algorithm at
         // http://xymaths.free.fr/Informatique-Programmation/javascript/canvas-dessin-fleche.php
 
-        let dx = x2 - x1;
-        let dy = y2 - y1;
+        let dx = head_x - start_x;
+        let dy = head_y - start_y;
         let base_length = (dx * dx + dy * dy).sqrt();
 
-        let shaft_x = x2 + arrow_length * (x1 - x2) / base_length;
-        let shaft_y = y2 + arrow_length * (y1 - y2) / base_length;
+        let shaft_x = head_x + arrow_length * (start_x - head_x) / base_length;
+        let shaft_y = head_y + arrow_length * (start_y - head_y) / base_length;
 
-        let arrow_1_x = shaft_x + arrow_width * (y1 - y2) / base_length;
-        let arrow_1_y = shaft_y + arrow_width * (x2 - x1) / base_length;
+        let arrow_1_x = shaft_x + arrow_width * (start_y - head_y) / base_length;
+        let arrow_1_y = shaft_y + arrow_width * (head_x - start_x) / base_length;
 
-        let arrow_2_x = shaft_x - arrow_width * (y1 - y2) / base_length;
-        let arrow_2_y = shaft_y - arrow_width * (x2 - x1) / base_length;
+        let arrow_2_x = shaft_x - arrow_width * (start_y - head_y) / base_length;
+        let arrow_2_y = shaft_y - arrow_width * (head_x - start_x) / base_length;
 
-        context.move_to(x1, y1);
-        context.line_to(x2, y2);
+        context.move_to(start_x, start_y);
+        context.line_to(head_x, head_y);
         context.stroke();
 
         context.move_to(arrow_1_x, arrow_1_y);
-        context.line_to(x2, y2);
+        context.line_to(head_x, head_y);
         context.line_to(arrow_2_x, arrow_2_y);
         context.stroke();
     }
