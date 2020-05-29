@@ -114,11 +114,12 @@ impl ChessBoardPainter {
     }
 
     pub fn paint(&self, context: &Context, chess_state: &ChessState, dnd_state: &DndState) {
-        self.draw_background(context, chess_state);
-        self.draw_cells(context, chess_state, dnd_state);
         self.draw_coordinates(context, chess_state);
         self.draw_player_turn(context, chess_state);
+        self.draw_background(context, chess_state);
+        self.draw_cells(context, chess_state, dnd_state);
         self.draw_pieces(context, chess_state, dnd_state);
+        self.draw_last_move(context, chess_state);
         self.draw_cursor_piece(context, dnd_state);
     }
 
@@ -177,6 +178,93 @@ impl ChessBoardPainter {
             2f64 * std::f64::consts::PI,
         );
         context.fill();
+    }
+
+    fn draw_last_move(&self, context: &Context, chess_state: &ChessState) {
+        if let Some(last_move) = &chess_state.last_move {
+            let (lm_red, lm_green, lm_blue) = chess_state.last_move_arrow_color;
+            let alpha = 0.7;
+            context.set_source_rgba(lm_red, lm_green, lm_blue, alpha);
+            context.set_line_width(self.cells_size as f64 * 0.10);
+
+            let origin_file = last_move.origin.file as f64;
+            let origin_rank = last_move.origin.rank as f64;
+
+            let target_file = last_move.target.file as f64;
+            let target_rank = last_move.target.rank as f64;
+
+            let cells_size = self.cells_size as f64;
+
+            let origin_x = if chess_state.black_side == BlackSide::BlackBottom {
+                cells_size * (8.0 - origin_file)
+            } else {
+                cells_size * (1.0 + origin_file)
+            };
+
+            let origin_y = if chess_state.black_side == BlackSide::BlackBottom {
+                cells_size * (1.0 + origin_rank)
+            } else {
+                cells_size * (8.0 - origin_rank)
+            };
+
+            let target_x = if chess_state.black_side == BlackSide::BlackBottom {
+                cells_size * (8.0 - target_file)
+            } else {
+                cells_size * (1.0 + target_file)
+            };
+
+            let target_y = if chess_state.black_side == BlackSide::BlackBottom {
+                cells_size * (1.0 + target_rank)
+            } else {
+                cells_size * (8.0 - target_rank)
+            };
+
+            self.draw_arrow(
+                context,
+                origin_x,
+                origin_y,
+                target_x,
+                target_y,
+                cells_size * 0.5,
+                cells_size * 0.5,
+            );
+        }
+    }
+
+    fn draw_arrow(
+        &self,
+        context: &Context,
+        x1: f64,
+        y1: f64,
+        x2: f64,
+        y2: f64,
+        arrow_length: f64,
+        arrow_width: f64,
+    ) {
+        // Inspired by algorithm at
+        // http://xymaths.free.fr/Informatique-Programmation/javascript/canvas-dessin-fleche.php
+
+        let dx = x2 - x1;
+        let dy = y2 - y1;
+        let base_length = (dx * dx + dy * dy).sqrt();
+
+        let shaft_x = x2 + arrow_length * (x1 - x2) / base_length;
+        let shaft_y = y2 + arrow_length * (y1 - y2) / base_length;
+
+        let arrow_1_x = shaft_x + arrow_width * (y1 - y2) / base_length;
+        let arrow_1_y = shaft_y + arrow_width * (x2 - x1) / base_length;
+
+        let arrow_2_x = shaft_x - arrow_width * (y1 - y2) / base_length;
+        let arrow_2_y = shaft_y - arrow_width * (x2 - x1) / base_length;
+
+        context.move_to(x1, y1);
+        context.line_to(x2, y2);
+        context.stroke();
+
+        context.move_to(arrow_1_x, arrow_1_y);
+        context.line_to(x2, y2);
+        context.line_to(arrow_2_x, arrow_2_y);
+        context.stroke();
     }
 
     fn draw_coordinates(&self, context: &Context, chess_state: &ChessState) {

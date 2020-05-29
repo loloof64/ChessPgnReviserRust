@@ -219,5 +219,20 @@ fn try_to_apply_move(
     let move_uci = move_uci.as_str();
 
     let mut chess_state = chess_state.borrow_mut();
-    let _ = chess_state.board.apply_uci_move(move_uci);
+    let success = chess_state.board.apply_uci_move(move_uci);
+
+    if success {
+        let last_move = LastMove {
+            origin: BoardCellCoord {
+                file: dnd_state.origin_file,
+                rank: dnd_state.origin_rank,
+            },
+            target: BoardCellCoord {
+                file: target_file as u8,
+                rank: target_rank as u8,
+            }
+        };
+
+        chess_state.last_move = Some(last_move);
+    }
 }

@@ -18,6 +18,16 @@ pub enum BlackSide {
     BlackBottom,
 }
 
+pub struct BoardCellCoord {
+    pub file: u8,
+    pub rank: u8,
+}
+
+pub struct LastMove {
+    pub origin: BoardCellCoord,
+    pub target: BoardCellCoord,
+}
+
 pub struct ChessState {
     pub size: u32,
     pub background_color: (f64, f64, f64),
@@ -27,8 +37,10 @@ pub struct ChessState {
     pub dnd_start_cell_color: (f64, f64, f64),
     pub dnd_end_cell_color: (f64, f64, f64),
     pub dnd_cross_color: (f64, f64, f64),
+    pub last_move_arrow_color: (f64, f64, f64),
     pub board: Board,
     pub black_side: BlackSide,
+    pub last_move: Option<LastMove>,
 }
 
 #[derive(Default)]
@@ -58,6 +70,7 @@ pub struct ChessStateBuilder {
     dnd_start_cell_color: (f64, f64, f64),
     dnd_end_cell_color: (f64, f64, f64),
     dnd_cross_color: (f64, f64, f64),
+    last_move_arrow_color: (f64, f64, f64),
     black_side: BlackSide,
 }
 
@@ -73,6 +86,7 @@ impl ChessStateBuilder {
             dnd_start_cell_color: (0.92, 0.12, 0.22),
             dnd_end_cell_color: (0.34, 0.82, 0.14),
             dnd_cross_color: (0.70, 0.18, 0.90),
+            last_move_arrow_color: (0.25, 0.36, 0.93),
             black_side: BlackSide::BlackTop,
         }
     }
@@ -87,8 +101,10 @@ impl ChessStateBuilder {
             dnd_start_cell_color: self.dnd_start_cell_color,
             dnd_end_cell_color: self.dnd_end_cell_color,
             dnd_cross_color: self.dnd_cross_color,
+            last_move_arrow_color: self.last_move_arrow_color,
             black_side: self.black_side,
             board: Board::start_pos(),
+            last_move: None,
         }
     }
 
@@ -126,6 +142,10 @@ impl ChessStateBuilder {
 
     fn set_dnd_cross_color(&mut self, cross_color: (f64, f64, f64)) {
         self.dnd_cross_color = cross_color;
+    }
+
+    fn set_last_move_arrow_color(&mut self, last_move_arrow_color: (f64, f64, f64)) {
+        self.last_move_arrow_color = last_move_arrow_color;
     }
 }
 
