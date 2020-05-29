@@ -14,7 +14,7 @@ pub fn mouse_pressed_handler(
     canvas: &DrawingArea,
     event: &EventButton,
 ) {
-    if !get_dnd_active_state(dnd_state) {
+    if !get_dnd_active_state(dnd_state) && !is_pending_promotion(chess_state) {
         let (x, y) = event.get_position();
         let file = get_file(x, chess_state);
         let rank = get_rank(y, chess_state);
@@ -39,21 +39,24 @@ pub fn mouse_released_handler(
     canvas: &DrawingArea,
     event: &EventButton,
 ) {
-    if get_dnd_active_state(dnd_state) {
+    if get_dnd_active_state(dnd_state) && !is_pending_promotion(chess_state) {
         set_dnd_inactive(dnd_state);
-
         let (x, y) = event.get_position();
-
+        
         update_cursor_position(x, y, chess_state, dnd_state);
         update_target_coordinates(x, y, chess_state, dnd_state);
-
+        
         let file = get_file(x, chess_state);
         let rank = get_rank(y, chess_state);
         if cell_in_bounds(file, rank) {
-            try_to_apply_move(x, y, chess_state, dnd_state);
+            if is_promotion_move(rank, chess_state, dnd_state) {
+                set_pending_promotion_active(chess_state);
+            } else {
+                try_to_apply_move(x, y, chess_state, dnd_state);
+                repaint_canvas(canvas, chess_state);
+            }
         }
 
-        repaint_canvas(canvas, chess_state);
     }
 }
 
@@ -63,7 +66,7 @@ pub fn mouse_moved_handler(
     canvas: &DrawingArea,
     event: &EventMotion,
 ) {
-    if get_dnd_active_state(dnd_state) {
+    if get_dnd_active_state(dnd_state) && !is_pending_promotion(chess_state) {
         let (x, y) = event.get_position();
 
         update_cursor_position(x, y, chess_state, dnd_state);
@@ -230,9 +233,30 @@ fn try_to_apply_move(
             target: BoardCellCoord {
                 file: target_file as u8,
                 rank: target_rank as u8,
-            }
+            },
         };
 
         chess_state.last_move = Some(last_move);
     }
+}
+
+fn is_promotion_move(
+    target_rank: i8,
+    chess_state: &RefCell<ChessState>,
+    dnd_state: &RefCell<DndState>,
+) -> bool {
+    let dnd_state = dnd_state.borrow();
+    let moving_piece = piece_at_square(dnd_state.origin_file, dnd_state.origin_rank, chess_state)
+        .expect("Could not get moved piece");
+    (moving_piece == 'P' && target_rank == 7) || (moving_piece == 'p' && target_rank == 0)
+}
+
+fn is_pending_promotion(chess_state: &RefCell<ChessState>) -> bool {
+    let chess_state = chess_state.borrow();
+    chess_state.pending_promotion
+}
+
+fn set_pending_promotion_active(chess_state: &RefCell<ChessState>) {
+    let mut chess_state = chess_state.borrow_mut();
+    chess_state.pending_promotion = true;
 }

@@ -41,6 +41,7 @@ pub struct ChessState {
     pub board: Board,
     pub black_side: BlackSide,
     pub last_move: Option<LastMove>,
+    pub pending_promotion: bool,
 }
 
 #[derive(Default)]
@@ -105,6 +106,7 @@ impl ChessStateBuilder {
             black_side: self.black_side,
             board: Board::start_pos(),
             last_move: None,
+            pending_promotion: false,
         }
     }
 
