@@ -114,9 +114,9 @@ impl ChessBoardPainter {
     }
 
     pub fn paint(&self, context: &Context, chess_state: &ChessState, dnd_state: &DndState) {
+        self.draw_background(context, chess_state);
         self.draw_coordinates(context, chess_state);
         self.draw_player_turn(context, chess_state);
-        self.draw_background(context, chess_state);
         self.draw_cells(context, chess_state, dnd_state);
         self.draw_pieces(context, chess_state, dnd_state);
         self.draw_last_move(context, chess_state);
@@ -184,8 +184,6 @@ impl ChessBoardPainter {
         if let Some(last_move) = &chess_state.last_move {
             let (lm_red, lm_green, lm_blue) = chess_state.last_move_arrow_color;
             let alpha = 0.7;
-            context.set_source_rgba(lm_red, lm_green, lm_blue, alpha);
-            context.set_line_width(self.cells_size as f64 * 0.10);
 
             let origin_file = last_move.origin.file as f64;
             let origin_rank = last_move.origin.rank as f64;
@@ -218,6 +216,9 @@ impl ChessBoardPainter {
             } else {
                 cells_size * (8.0 - target_rank)
             };
+
+            context.set_source_rgba(lm_red, lm_green, lm_blue, alpha);
+            context.set_line_width(self.cells_size as f64 * 0.10);
 
             self.draw_arrow(
                 context,
