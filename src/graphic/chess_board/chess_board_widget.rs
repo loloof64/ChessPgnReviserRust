@@ -1,9 +1,9 @@
 use gdk::EventMask;
 use gtk::prelude::*;
 use gtk::Inhibit;
-use shakmaty::{Chess};
 use relm::Widget;
 use relm_derive::{widget, Msg};
+use shakmaty::Chess;
 
 use super::drag_and_drop_handlers::*;
 

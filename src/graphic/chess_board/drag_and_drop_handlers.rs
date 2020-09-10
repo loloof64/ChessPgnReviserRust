@@ -1,7 +1,7 @@
 use gdk::{EventButton, EventMotion};
 use gtk::prelude::*;
 use gtk::DrawingArea;
-use shakmaty::{Setup, Position, uci::{Uci}};
+use shakmaty::{uci::Uci, Position, Setup};
 use std::cell::RefCell;
 
 use std::cmp;
@@ -42,21 +42,19 @@ pub fn mouse_released_handler(
     if dnd_is_active(dnd_state) && !is_pending_promotion(chess_state) {
         set_dnd_inactive(dnd_state);
         let (x, y) = event.get_position();
-        
         update_cursor_position(x, y, chess_state, dnd_state);
         update_target_coordinates(x, y, chess_state, dnd_state);
-        
         let file = get_file(x, chess_state);
         let rank = get_rank(y, chess_state);
         if cell_in_bounds(file, rank) {
             if is_promotion_move(rank, chess_state, dnd_state) {
                 set_pending_promotion_active(chess_state);
+                repaint_canvas(canvas, chess_state);
             } else {
                 try_to_apply_move(x, y, chess_state, dnd_state);
                 repaint_canvas(canvas, chess_state);
             }
         }
-
     }
 }
 
@@ -189,25 +187,31 @@ fn cell_in_bounds(file: i8, rank: i8) -> bool {
 fn piece_at_square(file: u8, rank: u8, chess_state: &RefCell<ChessState>) -> Option<char> {
     let files_chars = "abcdefgh";
     let rank_chars = "12345678";
-    let expected_file_char = files_chars.chars().nth(file as usize).expect("invalid file index");
-    let expected_rank_char = rank_chars.chars().nth(rank as usize).expect("invalid rank index");
+    let expected_file_char = files_chars
+        .chars()
+        .nth(file as usize)
+        .expect("invalid file index");
+    let expected_rank_char = rank_chars
+        .chars()
+        .nth(rank as usize)
+        .expect("invalid rank index");
     let chess_state = chess_state.borrow();
 
-    let piece = chess_state
-        .board
-        .board()
-        .pieces();
-    let piece = piece.filter(|current_piece| {
-        let piece_coordinates = current_piece.0;
-        let piece_coordinates = piece_coordinates.coords();
+    let piece = chess_state.board.board().pieces();
+    let piece = piece
+        .filter(|current_piece| {
+            let piece_coordinates = current_piece.0;
+            let piece_coordinates = piece_coordinates.coords();
 
-        piece_coordinates.0.char() == expected_file_char && piece_coordinates.1.char() == expected_rank_char
-    }).collect::<Vec<_>>();
+            piece_coordinates.0.char() == expected_file_char
+                && piece_coordinates.1.char() == expected_rank_char
+        })
+        .collect::<Vec<_>>();
     let piece = piece.get(0);
 
     match piece {
         Some(value) => Some(value.1.char()),
-        _ => None
+        _ => None,
     }
 }
 
@@ -260,7 +264,7 @@ fn try_to_apply_move(
                 chess_state.last_move = Some(last_move);
                 chess_state.board = move_result.unwrap();
             }
-        } 
+        }
     }
 }
 
