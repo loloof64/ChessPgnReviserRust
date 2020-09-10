@@ -40,6 +40,7 @@ impl Widget for Win {
 
     view! {
         gtk::Window {
+            title: "Chess pgn reviser",
             gtk::Box(gtk::Orientation::Vertical, 5) {
                 #[name="chess_board"]
                 ChessBoard(500) {
