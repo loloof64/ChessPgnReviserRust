@@ -5,6 +5,7 @@ use resvg::backend_cairo::render_to_image;
 use resvg::usvg::ShapeRendering;
 use resvg::{usvg::Tree, FitTo, Options};
 use std::collections::HashMap;
+use shakmaty::fen::{fen};
 
 use super::chess_board_widget::{BlackSide, ChessState, DndState};
 
@@ -144,7 +145,7 @@ impl ChessBoardPainter {
     }
 
     fn draw_pieces(&self, context: &Context, chess_state: &ChessState, dnd_state: &DndState) {
-        let position = chess_state.board.fen();
+        let position = fen(&chess_state.board);
         let position = position.as_str();
         let black_side = chess_state.black_side;
         let pieces_lines = self.get_pieces_values_from_fen(position);
@@ -155,7 +156,7 @@ impl ChessBoardPainter {
     }
 
     fn draw_player_turn(&self, context: &Context, chess_state: &ChessState) {
-        let position = chess_state.board.fen();
+        let position = fen(&chess_state.board);
         let position = position.as_str();
         let turn_str = position.split(" ").skip(1).take(1).collect::<Vec<_>>()[0];
         let is_white_turn = turn_str == "w";

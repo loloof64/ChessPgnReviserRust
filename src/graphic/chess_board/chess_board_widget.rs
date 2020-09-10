@@ -1,7 +1,7 @@
 use gdk::EventMask;
 use gtk::prelude::*;
 use gtk::Inhibit;
-use pleco::Board;
+use shakmaty::{Chess};
 use relm::Widget;
 use relm_derive::{widget, Msg};
 
@@ -38,7 +38,7 @@ pub struct ChessState {
     pub dnd_end_cell_color: (f64, f64, f64),
     pub dnd_cross_color: (f64, f64, f64),
     pub last_move_arrow_color: (f64, f64, f64),
-    pub board: Board,
+    pub board: Chess,
     pub black_side: BlackSide,
     pub last_move: Option<LastMove>,
     pub pending_promotion: bool,
@@ -104,7 +104,7 @@ impl ChessStateBuilder {
             dnd_cross_color: self.dnd_cross_color,
             last_move_arrow_color: self.last_move_arrow_color,
             black_side: self.black_side,
-            board: Board::start_pos(),
+            board: Chess::default(),
             last_move: None,
             pending_promotion: false,
         }

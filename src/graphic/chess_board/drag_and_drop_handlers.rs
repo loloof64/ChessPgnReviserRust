@@ -1,7 +1,7 @@
 use gdk::{EventButton, EventMotion};
 use gtk::prelude::*;
 use gtk::DrawingArea;
-use pleco::core::sq::SQ;
+use shakmaty::{Setup, Position, uci::{Uci}};
 use std::cell::RefCell;
 
 use std::cmp;
@@ -14,7 +14,7 @@ pub fn mouse_pressed_handler(
     canvas: &DrawingArea,
     event: &EventButton,
 ) {
-    if !get_dnd_active_state(dnd_state) && !is_pending_promotion(chess_state) {
+    if !dnd_is_active(dnd_state) && !is_pending_promotion(chess_state) {
         let (x, y) = event.get_position();
         let file = get_file(x, chess_state);
         let rank = get_rank(y, chess_state);
@@ -25,8 +25,8 @@ pub fn mouse_pressed_handler(
             let file = file as u8;
             let rank = rank as u8;
 
-            if let Some(fen) = piece_at_square(file, rank, chess_state) {
-                set_dnd_active(fen, file, rank, dnd_state);
+            if let Some(board_fen) = piece_at_square(file, rank, chess_state) {
+                set_dnd_active(board_fen, file, rank, dnd_state);
                 repaint_canvas(canvas, chess_state);
             }
         }
@@ -39,7 +39,7 @@ pub fn mouse_released_handler(
     canvas: &DrawingArea,
     event: &EventButton,
 ) {
-    if get_dnd_active_state(dnd_state) && !is_pending_promotion(chess_state) {
+    if dnd_is_active(dnd_state) && !is_pending_promotion(chess_state) {
         set_dnd_inactive(dnd_state);
         let (x, y) = event.get_position();
         
@@ -66,7 +66,7 @@ pub fn mouse_moved_handler(
     canvas: &DrawingArea,
     event: &EventMotion,
 ) {
-    if get_dnd_active_state(dnd_state) && !is_pending_promotion(chess_state) {
+    if dnd_is_active(dnd_state) && !is_pending_promotion(chess_state) {
         let (x, y) = event.get_position();
 
         update_cursor_position(x, y, chess_state, dnd_state);
@@ -76,7 +76,7 @@ pub fn mouse_moved_handler(
     }
 }
 
-fn get_dnd_active_state(dnd_state: &RefCell<DndState>) -> bool {
+fn dnd_is_active(dnd_state: &RefCell<DndState>) -> bool {
     let dnd_state = (*dnd_state).borrow();
     dnd_state.dnd_active
 }
@@ -187,11 +187,28 @@ fn cell_in_bounds(file: i8, rank: i8) -> bool {
 }
 
 fn piece_at_square(file: u8, rank: u8, chess_state: &RefCell<ChessState>) -> Option<char> {
+    let files_chars = "abcdefgh";
+    let rank_chars = "12345678";
+    let expected_file_char = files_chars.chars().nth(file as usize).expect("invalid file index");
+    let expected_rank_char = rank_chars.chars().nth(rank as usize).expect("invalid rank index");
     let chess_state = chess_state.borrow();
-    chess_state
+
+    let piece = chess_state
         .board
-        .piece_at_sq(SQ::from(rank * 8 + file))
-        .character()
+        .board()
+        .pieces();
+    let piece = piece.filter(|current_piece| {
+        let piece_coordinates = current_piece.0;
+        let piece_coordinates = piece_coordinates.coords();
+
+        piece_coordinates.0.char() == expected_file_char && piece_coordinates.1.char() == expected_rank_char
+    }).collect::<Vec<_>>();
+    let piece = piece.get(0);
+
+    match piece {
+        Some(value) => Some(value.1.char()),
+        _ => None
+    }
 }
 
 fn cell_to_uci<'a>(file: u8, rank: u8) -> String {
@@ -220,23 +237,30 @@ fn try_to_apply_move(
 
     let move_uci = format!("{}{}", origin_cell_uci, target_cell_uci,);
     let move_uci = move_uci.as_str();
+    let move_uci = Uci::from_ascii(move_uci.as_bytes());
 
-    let mut chess_state = chess_state.borrow_mut();
-    let success = chess_state.board.apply_uci_move(move_uci);
+    if let Ok(legal_move) = move_uci {
+        let mut chess_state = chess_state.borrow_mut();
+        if let Ok(move_conversion) = legal_move.to_move(&chess_state.board) {
+            let move_result = chess_state.board.clone().play(&move_conversion);
+            let move_applied = move_result.is_ok();
 
-    if success {
-        let last_move = LastMove {
-            origin: BoardCellCoord {
-                file: dnd_state.origin_file,
-                rank: dnd_state.origin_rank,
-            },
-            target: BoardCellCoord {
-                file: target_file as u8,
-                rank: target_rank as u8,
-            },
-        };
+            if move_applied {
+                let last_move = LastMove {
+                    origin: BoardCellCoord {
+                        file: dnd_state.origin_file,
+                        rank: dnd_state.origin_rank,
+                    },
+                    target: BoardCellCoord {
+                        file: target_file as u8,
+                        rank: target_rank as u8,
+                    },
+                };
 
-        chess_state.last_move = Some(last_move);
+                chess_state.last_move = Some(last_move);
+                chess_state.board = move_result.unwrap();
+            }
+        } 
     }
 }
 
