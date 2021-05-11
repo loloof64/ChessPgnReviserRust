@@ -1,116 +1,35 @@
-use failure::Fail;
-
-use cairo::{Context, FontFace, FontWeight, ImageSurface};
-use resvg::backend_cairo::render_to_image;
-use resvg::usvg::ShapeRendering;
-use resvg::{usvg::Tree, FitTo, Options};
-use std::collections::HashMap;
+use cairo::{Context, FontFace, FontWeight};
 
 use super::chess_board_widget::{BlackSide, ChessState, DndState};
+use super::simple_svg_painter::draw_svg;
 
-#[derive(Debug, Fail)]
-pub enum ChessPiecesError {
-    #[fail(display = "Bad piece fen: {}", fen)]
-    BadPieceFenReference { fen: char },
-}
-
-struct ChessPiecesImages {
-    images: HashMap<char, ImageSurface>,
-}
-
-impl ChessPiecesImages {
-    fn new() -> Self {
-        ChessPiecesImages {
-            images: HashMap::new(),
-        }
-    }
-
-    fn build_images(&mut self, cells_size: u32) {
-        let options = ChessPiecesImages::svg_options_for_cells_size(cells_size);
-
-        for fen in vec!['P', 'N', 'B', 'R', 'Q', 'K', 'p', 'n', 'b', 'r', 'q', 'k'] {
-            let svg_content = ChessPiecesImages::piece_value_to_svg_definition(fen, &options);
-            let image_to_render =
-                ChessPiecesImages::image_surface_from_svg_definition(&svg_content, &options);
-
-            self.insert_image_if_defined(fen, image_to_render);
-        }
-    }
-
-    fn insert_image_if_defined(&mut self, fen: char, image: Option<ImageSurface>) {
-        if let Some(image) = image {
-            self.images.insert(fen, image);
-        }
-    }
-
-    fn image_surface_from_svg_definition(
-        svg_tree: &Option<Tree>,
-        options: &Options,
-    ) -> Option<ImageSurface> {
-        if let Some(tree) = svg_tree {
-            if let Some(image) = render_to_image(&tree, &options) {
-                Some(image)
-            } else {
-                None
-            }
-        } else {
-            None
-        }
-    }
-
-    fn svg_options_for_cells_size(cells_size: u32) -> Options {
-        let base_size = 45f32;
-        let scale = cells_size as f32 / base_size;
-        let mut options = Options::default();
-        options.usvg.shape_rendering = ShapeRendering::GeometricPrecision;
-        options.fit_to = FitTo::Zoom(scale);
-
-        options
-    }
-
-    fn piece_value_to_svg_definition(piece_value_fen: char, options: &Options) -> Option<Tree> {
-        match piece_value_fen {
-            'P' => Some(include_str!("./Chess_plt45.svg")),
-            'N' => Some(include_str!("./Chess_nlt45.svg")),
-            'B' => Some(include_str!("./Chess_blt45.svg")),
-            'R' => Some(include_str!("./Chess_rlt45.svg")),
-            'Q' => Some(include_str!("./Chess_qlt45.svg")),
-            'K' => Some(include_str!("./Chess_klt45.svg")),
-            'p' => Some(include_str!("./Chess_pdt45.svg")),
-            'n' => Some(include_str!("./Chess_ndt45.svg")),
-            'b' => Some(include_str!("./Chess_bdt45.svg")),
-            'r' => Some(include_str!("./Chess_rdt45.svg")),
-            'q' => Some(include_str!("./Chess_qdt45.svg")),
-            'k' => Some(include_str!("./Chess_kdt45.svg")),
-            _ => None,
-        }
-        .map(|file_content| Tree::from_data(file_content.as_bytes(), &options.usvg).ok())
-        .unwrap_or(None)
-    }
-
-    fn get_image_for_fen(&self, fen: char) -> Result<ImageSurface, ChessPiecesError> {
-        match self.images.get(&fen) {
-            Some(image) => Ok((image).clone()),
-            None => Err(ChessPiecesError::BadPieceFenReference { fen }),
-        }
+fn piece_value_to_svg_string(piece_value_fen: char) -> Option<String> {
+    match piece_value_fen {
+        'P' => Some(String::from(include_str!("./Chess_plt45.svg"))),
+        'N' => Some(String::from(include_str!("./Chess_nlt45.svg"))),
+        'B' => Some(String::from(include_str!("./Chess_blt45.svg"))),
+        'R' => Some(String::from(include_str!("./Chess_rlt45.svg"))),
+        'Q' => Some(String::from(include_str!("./Chess_qlt45.svg"))),
+        'K' => Some(String::from(include_str!("./Chess_klt45.svg"))),
+        'p' => Some(String::from(include_str!("./Chess_pdt45.svg"))),
+        'n' => Some(String::from(include_str!("./Chess_ndt45.svg"))),
+        'b' => Some(String::from(include_str!("./Chess_bdt45.svg"))),
+        'r' => Some(String::from(include_str!("./Chess_rdt45.svg"))),
+        'q' => Some(String::from(include_str!("./Chess_qdt45.svg"))),
+        'k' => Some(String::from(include_str!("./Chess_kdt45.svg"))),
+        _ => None,
     }
 }
 
 pub struct ChessBoardPainter {
     cells_size: u32,
-    pieces_images: ChessPiecesImages,
 }
 
 impl ChessBoardPainter {
     pub fn new(cells_size: u32) -> Self {
         ChessBoardPainter {
             cells_size,
-            pieces_images: ChessPiecesImages::new(),
         }
-    }
-
-    pub fn build_images(&mut self) {
-        self.pieces_images.build_images(self.cells_size);
     }
 
     pub fn paint(&self, context: &Context, chess_state: &ChessState, dnd_state: &DndState) {
@@ -278,19 +197,11 @@ impl ChessBoardPainter {
 
     fn draw_cursor_piece(&self, context: &Context, dnd_state: &DndState) {
         if dnd_state.dnd_active {
-            let image = self.get_image_cursor_for_fen(dnd_state.moved_piece_fen);
-            self.draw_single_piece_image(context, image, dnd_state.cursor_x, dnd_state.cursor_y);
+            let ratio = self.cells_size as f32 / 45f32;
+            if let Some(image_content) = piece_value_to_svg_string(dnd_state.moved_piece_fen) {
+                draw_svg(context, image_content, dnd_state.cursor_x, dnd_state.cursor_y, ratio);
+            }
         }
-    }
-
-    fn get_image_cursor_for_fen(&self, fen: char) -> ImageSurface {
-        let original_image = &self.pieces_images.images[&fen];
-        original_image.clone()
-    }
-
-    fn get_pieces_values_from_fen<'a>(&self, position_fen: &'a str) -> Vec<&'a str> {
-        let board_value = position_fen.split(" ").take(1).collect::<Vec<_>>()[0];
-        board_value.split("/").collect::<Vec<_>>()
     }
 
     fn draw_pieces_line(
@@ -356,16 +267,12 @@ impl ChessBoardPainter {
     ) {
         let col = self.get_col(col_index, black_side) as f64;
         let row = self.get_row(line_index, black_side) as f64;
+        let ratio = self.cells_size as f32 / 45f32;
         let cells_size = self.cells_size as f64;
 
-        self.draw_single_piece_image(
-            context,
-            self.pieces_images
-                .get_image_for_fen(value)
-                .expect(format!("could not get image for {}", value).as_str()),
-            cells_size * (0.5 + col),
-            cells_size * (0.5 + row),
-        );
+        if let Some(image_content) = piece_value_to_svg_string(value) {
+            draw_svg(context, image_content, cells_size * (0.5 + col), cells_size * (0.5 + row), ratio);
+        }
     }
 
     fn get_col(&self, col_index: u8, black_side: BlackSide) -> u8 {
@@ -459,15 +366,9 @@ impl ChessBoardPainter {
         }
     }
 
-    fn draw_single_piece_image(&self, context: &Context, image: ImageSurface, x: f64, y: f64) {
-        let origin = 0f64;
-
-        context.save();
-        context.translate(x, y);
-        context.set_source_surface(&image, origin, origin);
-        context.paint();
-        context.fill();
-        context.restore();
+    fn get_pieces_values_from_fen<'a>(&self, position_fen: &'a str) -> Vec<&'a str> {
+        let board_value = position_fen.split(" ").take(1).collect::<Vec<_>>()[0];
+        board_value.split("/").collect::<Vec<_>>()
     }
 }
 

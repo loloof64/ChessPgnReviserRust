@@ -218,10 +218,7 @@ impl ChessBoard {
     pub fn build_painter(&self) -> ChessBoardPainter {
         let chess_state = (*self.model.chess_state).borrow();
         let size = chess_state.size;
-        let mut painter = ChessBoardPainter::new(size / 9);
-        painter.build_images();
-
-        painter
+        ChessBoardPainter::new(size / 9)
     }
 
     pub fn set_canvas_draw_implementation(&self) {
