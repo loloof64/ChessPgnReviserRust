@@ -51,6 +51,7 @@ pub fn mouse_released_handler(
         if cell_in_bounds(file, rank) {
             if is_promotion_move(rank, chess_state, dnd_state) {
                 set_pending_promotion_active(chess_state);
+                repaint_canvas(canvas, chess_state);
             } else {
                 try_to_apply_move(x, y, chess_state, dnd_state);
                 repaint_canvas(canvas, chess_state);

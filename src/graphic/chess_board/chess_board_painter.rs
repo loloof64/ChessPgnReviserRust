@@ -39,7 +39,7 @@ impl ChessBoardPainter {
         self.draw_cells(context, chess_state, dnd_state);
         self.draw_pieces(context, chess_state, dnd_state);
         self.draw_last_move(context, chess_state);
-        self.draw_cursor_piece(context, dnd_state);
+        self.draw_cursor_piece(context, chess_state, dnd_state);
     }
 
     fn draw_background(&self, context: &Context, chess_state: &ChessState) {
@@ -69,7 +69,7 @@ impl ChessBoardPainter {
         let pieces_lines = self.get_pieces_values_from_fen(position);
 
         for (line_index, line) in pieces_lines.iter().enumerate() {
-            self.draw_pieces_line(context, line, line_index as u8, black_side, dnd_state);
+            self.draw_pieces_line(context, line, line_index as u8, black_side, chess_state, dnd_state);
         }
     }
 
@@ -195,8 +195,8 @@ impl ChessBoardPainter {
         self.draw_ranks_coordinates(&context, &chess_state);
     }
 
-    fn draw_cursor_piece(&self, context: &Context, dnd_state: &DndState) {
-        if dnd_state.dnd_active {
+    fn draw_cursor_piece(&self, context: &Context, chess_state: &ChessState, dnd_state: &DndState) {
+        if dnd_state.dnd_active || chess_state.pending_promotion {
             let ratio = self.cells_size as f32 / 45f32;
             if let Some(image_content) = piece_value_to_svg_string(dnd_state.moved_piece_fen) {
                 draw_svg(context, image_content, dnd_state.cursor_x, dnd_state.cursor_y, ratio);
@@ -210,6 +210,7 @@ impl ChessBoardPainter {
         line: &str,
         line_index: u8,
         black_side: BlackSide,
+        chess_state: &ChessState,
         dnd_state: &DndState,
     ) {
         let line_values = line.chars();
@@ -225,7 +226,7 @@ impl ChessBoardPainter {
                 col_index += self.skip_and_count_holes(value_ascii);
             } else {
                 self.draw_single_piece_if_not_moved_one(
-                    context, value, col_index, line_index, black_side, dnd_state,
+                    context, value, col_index, line_index, black_side, chess_state, dnd_state,
                 );
                 col_index += 1;
             }
@@ -245,12 +246,13 @@ impl ChessBoardPainter {
         col_index: u8,
         line_index: u8,
         black_side: BlackSide,
+        chess_state: &ChessState,
         dnd_state: &DndState,
     ) {
         let file = col_index;
         let rank = 7 - line_index;
         let is_not_moved_piece_cell =
-            !dnd_state.dnd_active || dnd_state.origin_file != file || dnd_state.origin_rank != rank;
+        (!dnd_state.dnd_active && !chess_state.pending_promotion) || dnd_state.origin_file != file || dnd_state.origin_rank != rank;
 
         if is_not_moved_piece_cell {
             self.draw_single_piece(context, value, col_index, line_index, black_side);
@@ -438,7 +440,7 @@ fn setup_dnd_highlight_if_matches(
     let (start_cell_red, start_cell_green, start_cell_blue) = chess_state.dnd_start_cell_color;
     let (end_cell_red, end_cell_green, end_cell_blue) = chess_state.dnd_end_cell_color;
     let (cross_cell_red, cross_cell_green, cross_cell_blue) = chess_state.dnd_cross_color;
-    if dnd_state.dnd_active {
+    if dnd_state.dnd_active || chess_state.pending_promotion {
         if is_dnd_target_cell(col, row, chess_state, dnd_state) {
             context.set_source_rgb(end_cell_red, end_cell_green, end_cell_blue);
         } else if is_dnd_start_cell(col, row, chess_state, dnd_state) {
