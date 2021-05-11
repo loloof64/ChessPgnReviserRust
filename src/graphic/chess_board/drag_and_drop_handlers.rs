@@ -50,7 +50,7 @@ pub fn mouse_released_handler(
         let rank = get_rank(y, chess_state);
         if cell_in_bounds(file, rank) {
             if is_promotion_move(rank, chess_state, dnd_state) {
-                set_pending_promotion_active(chess_state);
+                set_pending_promotion_active(chess_state, dnd_state);
                 repaint_canvas(canvas, chess_state);
             } else {
                 try_to_apply_move(x, y, chess_state, dnd_state);
@@ -257,7 +257,9 @@ fn is_pending_promotion(chess_state: &RefCell<ChessState>) -> bool {
     chess_state.pending_promotion
 }
 
-fn set_pending_promotion_active(chess_state: &RefCell<ChessState>) {
+fn set_pending_promotion_active(chess_state: &RefCell<ChessState>, dnd_state: &RefCell<DndState>) {
     let mut chess_state = chess_state.borrow_mut();
+    let mut dnd_state = dnd_state.borrow_mut();
+    dnd_state.promotion_started_in_reversed_side = chess_state.black_side == BlackSide::BlackBottom;
     chess_state.pending_promotion = true;
 }

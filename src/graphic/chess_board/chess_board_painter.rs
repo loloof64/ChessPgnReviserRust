@@ -199,7 +199,13 @@ impl ChessBoardPainter {
         if dnd_state.dnd_active || chess_state.pending_promotion {
             let ratio = self.cells_size as f32 / 45f32;
             if let Some(image_content) = piece_value_to_svg_string(dnd_state.moved_piece_fen) {
-                draw_svg(context, image_content, dnd_state.cursor_x, dnd_state.cursor_y, ratio);
+                let cells_size = self.cells_size as f64;
+                let whole_size = cells_size * 9f64;
+                let is_board_reversed = chess_state.black_side == BlackSide::BlackBottom;
+                let we_should_reverse = dnd_state.promotion_started_in_reversed_side != is_board_reversed;
+                let x = if we_should_reverse { whole_size - dnd_state.cursor_x - cells_size } else  {dnd_state.cursor_x};
+                let y = if we_should_reverse { whole_size - dnd_state.cursor_y - cells_size } else  {dnd_state.cursor_y};
+                draw_svg(context, image_content, x, y, ratio);
             }
         }
     }

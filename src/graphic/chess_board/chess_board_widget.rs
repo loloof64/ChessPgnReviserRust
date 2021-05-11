@@ -54,6 +54,7 @@ pub struct DndState {
     pub target_file: u8,
     pub target_rank: u8,
     pub moved_piece_fen: char,
+    pub promotion_started_in_reversed_side: bool,
 }
 
 #[allow(dead_code)]
