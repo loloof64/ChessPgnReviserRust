@@ -18,6 +18,7 @@ pub fn mouse_pressed_handler(
         let (x, y) = event.get_position();
         let file = get_file(x, chess_state);
         let rank = get_rank(y, chess_state);
+
         if cell_in_bounds(file, rank) {
             update_cursor_position(x, y, chess_state, dnd_state);
             update_target_coordinates(x, y, chess_state, dnd_state);

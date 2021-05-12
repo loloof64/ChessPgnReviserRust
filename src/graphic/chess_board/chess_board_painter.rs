@@ -202,7 +202,7 @@ impl ChessBoardPainter {
                 let cells_size = self.cells_size as f64;
                 let whole_size = cells_size * 9f64;
                 let is_board_reversed = chess_state.black_side == BlackSide::BlackBottom;
-                let we_should_reverse = dnd_state.promotion_started_in_reversed_side != is_board_reversed;
+                let we_should_reverse = chess_state.pending_promotion && (dnd_state.promotion_started_in_reversed_side != is_board_reversed);
                 let x = if we_should_reverse { whole_size - dnd_state.cursor_x - cells_size } else  {dnd_state.cursor_x};
                 let y = if we_should_reverse { whole_size - dnd_state.cursor_y - cells_size } else  {dnd_state.cursor_y};
                 draw_svg(context, image_content, x, y, ratio);
