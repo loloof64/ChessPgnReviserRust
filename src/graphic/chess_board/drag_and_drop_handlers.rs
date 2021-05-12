@@ -58,7 +58,6 @@ pub fn mouse_released_handler(
                 repaint_canvas(canvas, chess_state);
             }
         }
-
     }
 }
 
@@ -73,6 +72,12 @@ pub fn mouse_moved_handler(
 
         update_cursor_position(x, y, chess_state, dnd_state);
         update_target_coordinates(x, y, chess_state, dnd_state);
+
+        let file = get_file(x, chess_state);
+        let rank = get_rank(y, chess_state);
+        if !cell_in_bounds(file, rank) {
+            set_dnd_inactive(dnd_state);
+        }
 
         repaint_canvas(canvas, chess_state);
     }
